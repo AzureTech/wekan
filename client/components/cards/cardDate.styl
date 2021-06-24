@@ -1,31 +1,12 @@
-.edit-card-date
-  .fields
-    .left
-      width: 56%
-    .right
-      width: 38%
-  .datepicker
-    width: 100%
-    table
-      width: 100%
-      border: none
-      border-spacing: 0
-      border-collapse: collapse
-      thead
-        background: none
-      td, th
-        box-sizing: border-box
-
-
 .card-date
   display: block
   border-radius: 4px
   padding: 1px 3px
-  
+
   background-color: #dbdbdb
   &:hover, &.is-active
     background-color: #b3b3b3
-  
+
   &.current, &.almost-due, &.due, &.long-overdue
     color: #fff
 
@@ -33,17 +14,17 @@
     background-color: #5ba639
     &:hover, &.is-active
       background-color: darken(#5ba639, 10)
-  
+
   &.almost-due
     background-color: #edc909
     &:hover, &.is-active
       background-color: darken(#edc909, 10)
-  
+
   &.due
     background-color: #fa3f00
     &:hover, &.is-active
       background-color: darken(#fa3f00, 10)
-  
+
   &.long-overdue
     background-color: #fd5d47
     &:hover, &.is-active
@@ -62,12 +43,12 @@
   &.start-date
     time
       &::before
-        content: "\f08b"  // symbol: fa-sign-out
+        content: "\f251"  // symbol: fa-hourglass-start
 
   &.received-date
     time
       &::before
-        content: "\f251"  // symbol: fa-hourglass-start
+        content: "\f08b"  // symbol: fa-sign-out
 
   time
     &::before
@@ -76,3 +57,7 @@
       -webkit-font-smoothing: antialiased
       margin-right: 0.3em
 
+.customfield-date
+  display: block
+  border-radius: 4px
+  padding: 1px 3px

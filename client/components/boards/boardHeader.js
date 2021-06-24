@@ -1,5 +1,14 @@
+/*
+const DOWNCLS = 'fa-sort-down';
+const UPCLS = 'fa-sort-up';
+*/
+const sortCardsBy = new ReactiveVar('');
 Template.boardMenuPopup.events({
   'click .js-rename-board': Popup.open('boardChangeTitle'),
+  'click .js-custom-fields'() {
+    Sidebar.setView('customFields');
+    Popup.close();
+  },
   'click .js-open-archives'() {
     Sidebar.setView('archives');
     Popup.close();
@@ -13,36 +22,34 @@ Template.boardMenuPopup.events({
     // confirm that the board was successfully archived.
     FlowRouter.go('home');
   }),
+  'click .js-delete-board': Popup.afterConfirm('deleteBoard', function() {
+    const currentBoard = Boards.findOne(Session.get('currentBoard'));
+    Popup.close();
+    Boards.remove(currentBoard._id);
+    FlowRouter.go('home');
+  }),
   'click .js-outgoing-webhooks': Popup.open('outgoingWebhooks'),
   'click .js-import-board': Popup.open('chooseBoardSource'),
-});
-
-Template.boardMenuPopup.helpers({
-  exportUrl() {
-    const params = {
-      boardId: Session.get('currentBoard'),
-    };
-    const queryParams = {
-      authToken: Accounts._storedLoginToken(),
-    };
-    return FlowRouter.path('/api/boards/:boardId/export', params, queryParams);
-  },
-  exportFilename() {
-    const boardId = Session.get('currentBoard');
-    return `wekan-export-board-${boardId}.json`;
-  },
+  'click .js-subtask-settings': Popup.open('boardSubtaskSettings'),
+  'click .js-card-settings': Popup.open('boardCardSettings'),
 });
 
 Template.boardChangeTitlePopup.events({
-  submit(evt, tpl) {
-    const newTitle = tpl.$('.js-board-name').val().trim();
-    const newDesc = tpl.$('.js-board-desc').val().trim();
+  submit(event, templateInstance) {
+    const newTitle = templateInstance
+      .$('.js-board-name')
+      .val()
+      .trim();
+    const newDesc = templateInstance
+      .$('.js-board-desc')
+      .val()
+      .trim();
     if (newTitle) {
       this.rename(newTitle);
       this.setDescription(newDesc);
       Popup.close();
     }
-    evt.preventDefault();
+    event.preventDefault();
   },
 });
 
@@ -63,83 +70,120 @@ BlazeComponent.extendComponent({
     const currentBoard = Boards.findOne(Session.get('currentBoard'));
     return currentBoard && currentBoard.stars >= 2;
   },
-
+  /*
+  showSort() {
+    return Meteor.user().hasSortBy();
+  },
+  directionClass() {
+    return this.currentDirection() === -1 ? DOWNCLS : UPCLS;
+  },
+  changeDirection() {
+    const direction = 0 - this.currentDirection() === -1 ? '-' : '';
+    Meteor.call('setListSortBy', direction + this.currentListSortBy());
+  },
+  currentDirection() {
+    return Meteor.user().getListSortByDirection();
+  },
+  currentListSortBy() {
+    return Meteor.user().getListSortBy();
+  },
+  listSortShortDesc() {
+    return `list-label-short-${this.currentListSortBy()}`;
+  },
+  */
   events() {
-    return [{
-      'click .js-edit-board-title': Popup.open('boardChangeTitle'),
-      'click .js-star-board'() {
-        Meteor.user().toggleBoardStar(Session.get('currentBoard'));
+    return [
+      {
+        'click .js-edit-board-title': Popup.open('boardChangeTitle'),
+        'click .js-star-board'() {
+          Meteor.user().toggleBoardStar(Session.get('currentBoard'));
+        },
+        'click .js-open-board-menu': Popup.open('boardMenu'),
+        'click .js-change-visibility': Popup.open('boardChangeVisibility'),
+        'click .js-watch-board': Popup.open('boardChangeWatch'),
+        'click .js-open-archived-board'() {
+          Modal.open('archivedBoards');
+        },
+        'click .js-toggle-board-view': Popup.open('boardChangeView'),
+        'click .js-toggle-sidebar'() {
+          Sidebar.toggle();
+        },
+        'click .js-open-filter-view'() {
+          Sidebar.setView('filter');
+        },
+        'click .js-sort-cards': Popup.open('cardsSort'),
+        /*
+        'click .js-open-sort-view'(evt) {
+          const target = evt.target;
+          if (target.tagName === 'I') {
+            // click on the text, popup choices
+            this.changeDirection();
+          } else {
+            // change the sort order
+            Popup.open('listsort')(evt);
+          }
+        },
+        */
+        'click .js-filter-reset'(event) {
+          event.stopPropagation();
+          Sidebar.setView();
+          Filter.reset();
+        },
+        'click .js-sort-reset'() {
+          Session.set('sortBy', '');
+        },
+        'click .js-open-search-view'() {
+          Sidebar.setView('search');
+        },
+        'click .js-multiselection-activate'() {
+          const currentCard = Session.get('currentCard');
+          MultiSelection.activate();
+          if (currentCard) {
+            MultiSelection.add(currentCard);
+          }
+        },
+        'click .js-multiselection-reset'(event) {
+          event.stopPropagation();
+          MultiSelection.disable();
+        },
+        'click .js-log-in'() {
+          FlowRouter.go('atSignIn');
+        },
       },
-      'click .js-open-board-menu': Popup.open('boardMenu'),
-      'click .js-change-visibility': Popup.open('boardChangeVisibility'),
-      'click .js-watch-board': Popup.open('boardChangeWatch'),
-      'click .js-open-archived-board'() {
-        Modal.open('archivedBoards');
-      },
-      'click .js-toggle-board-view'() {
-        const currentUser = Meteor.user();
-        if (currentUser.profile.boardView === 'board-view-swimlanes') {
-          currentUser.setBoardView('board-view-lists');
-        } else if (currentUser.profile.boardView === 'board-view-lists') {
-          currentUser.setBoardView('board-view-swimlanes');
-        }
-      },
-      'click .js-open-filter-view'() {
-        Sidebar.setView('filter');
-      },
-      'click .js-filter-reset'(evt) {
-        evt.stopPropagation();
-        Sidebar.setView();
-        Filter.reset();
-      },
-      'click .js-open-search-view'() {
-        Sidebar.setView('search');
-      },
-      'click .js-multiselection-activate'() {
-        const currentCard = Session.get('currentCard');
-        MultiSelection.activate();
-        if (currentCard) {
-          MultiSelection.add(currentCard);
-        }
-      },
-      'click .js-multiselection-reset'(evt) {
-        evt.stopPropagation();
-        MultiSelection.disable();
-      },
-      'click .js-log-in'() {
-        FlowRouter.go('atSignIn');
-      },
-    }];
+    ];
   },
 }).register('boardHeaderBar');
 
 Template.boardHeaderBar.helpers({
   canModifyBoard() {
-    return Meteor.user() && Meteor.user().isBoardMember() && !Meteor.user().isCommentOnly();
+    return (
+      Meteor.user() &&
+      Meteor.user().isBoardMember() &&
+      !Meteor.user().isCommentOnly()
+    );
+  },
+  boardView() {
+    return Utils.boardView();
+  },
+  isSortActive() {
+    return Session.get('sortBy') ? true : false;
   },
 });
 
-BlazeComponent.extendComponent({
-  backgroundColors() {
-    return Boards.simpleSchema()._schema.color.allowedValues;
+Template.boardChangeViewPopup.events({
+  'click .js-open-lists-view'() {
+    Utils.setBoardView('board-view-lists');
+    Popup.close();
   },
-
-  isSelected() {
-    const currentBoard = Boards.findOne(Session.get('currentBoard'));
-    return currentBoard.color === this.currentData().toString();
+  'click .js-open-swimlanes-view'() {
+    Utils.setBoardView('board-view-swimlanes');
+    Popup.close();
   },
-
-  events() {
-    return [{
-      'click .js-select-background'(evt) {
-        const currentBoard = Boards.findOne(Session.get('currentBoard'));
-        const newColor = this.currentData().toString();
-        currentBoard.setColor(newColor);
-        evt.preventDefault();
-      },
-    }];
+  'click .js-open-cal-view'() {
+    Utils.setBoardView('board-view-cal');
+    Popup.close();
   },
-}).register('boardChangeColorPopup');
+});
 
 const CreateBoard = BlazeComponent.extendComponent({
   template() {
@@ -165,50 +209,105 @@ const CreateBoard = BlazeComponent.extendComponent({
     this.visibilityMenuIsOpen.set(!this.visibilityMenuIsOpen.get());
   },
 
-  onSubmit(evt) {
-    evt.preventDefault();
+  toggleAddTemplateContainer() {
+    $('#add-template-container').toggleClass('is-checked');
+  },
+
+  onSubmit(event) {
+    event.preventDefault();
     const title = this.find('.js-new-board-title').value;
-    const visibility = this.visibility.get();
 
-    this.boardId.set(Boards.insert({
-      title,
-      permission: visibility,
-    }));
+    const addTemplateContainer = $('#add-template-container.is-checked').length > 0;
+    if (addTemplateContainer) {
+      //const templateContainerId = Meteor.call('setCreateTemplateContainer');
+      //Utils.goBoardId(templateContainerId);
+      //alert('niinku template ' + Meteor.call('setCreateTemplateContainer'));
 
-    Swimlanes.insert({
-      title: 'Default',
-      boardId: this.boardId.get(),
-    });
+      this.boardId.set(
+        Boards.insert({
+            // title: TAPi18n.__('templates'),
+            title: title,
+            permission: 'private',
+            type: 'template-container',
+          }),
+       );
 
-    Utils.goBoardId(this.boardId.get());
+      // Insert the card templates swimlane
+      Swimlanes.insert({
+          // title: TAPi18n.__('card-templates-swimlane'),
+          title: 'Card Templates',
+          boardId: this.boardId.get(),
+          sort: 1,
+          type: 'template-container',
+        }),
+
+      // Insert the list templates swimlane
+      Swimlanes.insert(
+        {
+          // title: TAPi18n.__('list-templates-swimlane'),
+          title: 'List Templates',
+          boardId: this.boardId.get(),
+          sort: 2,
+          type: 'template-container',
+        },
+      );
+
+      // Insert the board templates swimlane
+      Swimlanes.insert(
+        {
+          //title: TAPi18n.__('board-templates-swimlane'),
+          title: 'Board Templates',
+          boardId: this.boardId.get(),
+          sort: 3,
+          type: 'template-container',
+        },
+      );
+
+      Utils.goBoardId(this.boardId.get());
+
+    } else {
+      const visibility = this.visibility.get();
+
+      this.boardId.set(
+        Boards.insert({
+          title,
+          permission: visibility,
+        }),
+      );
+
+      Swimlanes.insert({
+        title: 'Default',
+        boardId: this.boardId.get(),
+      });
+
+      Utils.goBoardId(this.boardId.get());
+    }
   },
 
   events() {
-    return [{
-      'click .js-select-visibility'() {
-        this.setVisibility(this.currentData());
+    return [
+      {
+        'click .js-select-visibility'() {
+          this.setVisibility(this.currentData());
+        },
+        'click .js-change-visibility': this.toggleVisibilityMenu,
+        'click .js-import': Popup.open('boardImportBoard'),
+        submit: this.onSubmit,
+        'click .js-import-board': Popup.open('chooseBoardSource'),
+        'click .js-board-template': Popup.open('searchElement'),
+        'click .js-toggle-add-template-container': this.toggleAddTemplateContainer,
       },
-      'click .js-change-visibility': this.toggleVisibilityMenu,
-      'click .js-import': Popup.open('boardImportBoard'),
-      submit: this.onSubmit,
-      'click .js-import-board': Popup.open('chooseBoardSource'),
-    }];
+    ];
   },
 }).register('createBoardPopup');
 
-BlazeComponent.extendComponent({
-  template() {
-    return 'chooseBoardSource';
-  },
-}).register('chooseBoardSourcePopup');
-
 (class HeaderBarCreateBoard extends CreateBoard {
-  onSubmit(evt) {
-    super.onSubmit(evt);
+  onSubmit(event) {
+    super.onSubmit(event);
     // Immediately star boards crated with the headerbar popup.
     Meteor.user().toggleBoardStar(this.boardId.get());
   }
-}).register('headerBarCreateBoardPopup');
+}.register('headerBarCreateBoardPopup'));
 
 BlazeComponent.extendComponent({
   visibilityCheck() {
@@ -224,9 +323,11 @@ BlazeComponent.extendComponent({
   },
 
   events() {
-    return [{
-      'click .js-select-visibility': this.selectBoardVisibility,
-    }];
+    return [
+      {
+        'click .js-select-visibility': this.selectBoardVisibility,
+      },
+    ];
   },
 }).register('boardChangeVisibilityPopup');
 
@@ -241,60 +342,134 @@ BlazeComponent.extendComponent({
   },
 
   events() {
-    return [{
-      'click .js-select-watch'() {
-        const level = this.currentData();
-        Meteor.call('watch', 'board', Session.get('currentBoard'), level, (err, ret) => {
-          if (!err && ret) Popup.close();
-        });
+    return [
+      {
+        'click .js-select-watch'() {
+          const level = this.currentData();
+          Meteor.call(
+            'watch',
+            'board',
+            Session.get('currentBoard'),
+            level,
+            (err, ret) => {
+              if (!err && ret) Popup.close();
+            },
+          );
+        },
       },
-    }];
+    ];
   },
 }).register('boardChangeWatchPopup');
 
+/*
 BlazeComponent.extendComponent({
-  integrations() {
-    const boardId = Session.get('currentBoard');
-    return Integrations.find({ boardId: `${boardId}` }).fetch();
+  onCreated() {
+    //this.sortBy = new ReactiveVar();
+    ////this.sortDirection = new ReactiveVar();
+    //this.setSortBy();
+    this.downClass = DOWNCLS;
+    this.upClass = UPCLS;
+  },
+  allowedSortValues() {
+    const types = [];
+    const pushed = {};
+    Meteor.user()
+      .getListSortTypes()
+      .forEach(type => {
+        const key = type.replace(/^-/, '');
+        if (pushed[key] === undefined) {
+          types.push({
+            name: key,
+            label: `list-label-${key}`,
+            shortLabel: `list-label-short-${key}`,
+          });
+          pushed[key] = 1;
+        }
+      });
+    return types;
+  },
+  Direction() {
+    return Meteor.user().getListSortByDirection() === -1
+      ? this.downClass
+      : this.upClass;
+  },
+  sortby() {
+    return Meteor.user().getListSortBy();
   },
 
-  integration(id) {
-    const boardId = Session.get('currentBoard');
-    return Integrations.findOne({ _id: id, boardId: `${boardId}` });
+  setSortBy(type = null) {
+    const user = Meteor.user();
+    if (type === null) {
+      type = user._getListSortBy();
+    } else {
+      let value = '';
+      if (type.map) {
+        // is an array
+        value = (type[1] === -1 ? '-' : '') + type[0];
+      }
+      Meteor.call('setListSortBy', value);
+    }
+    //this.sortBy.set(type[0]);
+    //this.sortDirection.set(type[1]);
   },
 
   events() {
-    return [{
-      'submit'(evt) {
-        evt.preventDefault();
-        const url = evt.target.url.value;
-        const boardId = Session.get('currentBoard');
-        let id = null;
-        let integration = null;
-        if (evt.target.id) {
-          id = evt.target.id.value;
-          integration = this.integration(id);
-          if (url) {
-            Integrations.update(integration._id, {
-              $set: {
-                url: `${url}`,
-              },
-            });
-          } else {
-            Integrations.remove(integration._id);
+    return [
+      {
+        'click .js-sort-by'(evt) {
+          evt.preventDefault();
+          const target = evt.target;
+          const sortby = target.getAttribute('name');
+          const down = !!target.querySelector(`.${this.upClass}`);
+          const direction = down ? -1 : 1;
+          this.setSortBy([sortby, direction]);
+          if (Utils.isMiniScreen) {
+            Popup.close();
           }
-        } else if (url) {
-          Integrations.insert({
-            userId: Meteor.userId(),
-            enabled: true,
-            type: 'outgoing-webhooks',
-            url: `${url}`,
-            boardId: `${boardId}`,
-            activities: ['all'],
-          });
-        }
-        Popup.close();
+        },
       },
-    }];
+    ];
   },
-}).register('outgoingWebhooksPopup');
+}).register('listsortPopup');
+*/
+
+BlazeComponent.extendComponent({
+  events() {
+    return [
+      {
+        'click .js-sort-due'() {
+          const sortBy = {
+            dueAt: 1,
+          };
+          Session.set('sortBy', sortBy);
+          sortCardsBy.set(TAPi18n.__('due-date'));
+          Popup.close();
+        },
+        'click .js-sort-title'() {
+          const sortBy = {
+            title: 1,
+          };
+          Session.set('sortBy', sortBy);
+          sortCardsBy.set(TAPi18n.__('title'));
+          Popup.close();
+        },
+        'click .js-sort-created-asc'() {
+          const sortBy = {
+            createdAt: 1,
+          };
+          Session.set('sortBy', sortBy);
+          sortCardsBy.set(TAPi18n.__('date-created-newest-first'));
+          Popup.close();
+        },
+        'click .js-sort-created-desc'() {
+          const sortBy = {
+            createdAt: -1,
+          };
+          Session.set('sortBy', sortBy);
+          sortCardsBy.set(TAPi18n.__('date-created-oldest-first'));
+          Popup.close();
+        },
+      },
+    ];
+  },
+}).register('cardsSortPopup');
