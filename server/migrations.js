@@ -1,7 +1,14 @@
+import fs from 'fs';
+import path from 'path';
 import AccountSettings from '../models/accountSettings';
+import TableVisibilityModeSettings from '../models/tableVisibilityModeSettings';
 import Actions from '../models/actions';
 import Activities from '../models/activities';
 import Announcements from '../models/announcements';
+import Attachments from '../models/attachments';
+import AttachmentsOld from '../models/attachments_old';
+import Avatars from '../models/avatars';
+import AvatarsOld from '../models/avatars_old';
 import Boards from '../models/boards';
 import CardComments from '../models/cardComments';
 import Cards from '../models/cards';
@@ -123,6 +130,7 @@ Migrations.add('use-css-class-for-boards-colors', () => {
     '#596557': 'natural',
     '#2A80B8': 'modern',
     '#2a2a2a': 'moderndark',
+    '#222222': 'exodark',
   };
   Boards.find().forEach(board => {
     const oldBoardColor = board.background.color;
@@ -645,6 +653,7 @@ Migrations.add('mutate-boardIds-in-customfields', () => {
 
 const modifiedAtTables = [
   AccountSettings,
+  TableVisibilityModeSettings,
   Actions,
   Activities,
   Announcements,
@@ -699,6 +708,7 @@ Migrations.add('add-missing-created-and-modified', () => {
 Migrations.add('fix-incorrect-dates', () => {
   const tables = [
     AccountSettings,
+    TableVisibilityModeSettings,
     Actions,
     Activities,
     Announcements,
@@ -1025,6 +1035,22 @@ Migrations.add('add-description-text-allowed', () => {
   );
 });
 
+Migrations.add('add-description-text-allowed-on-minicard', () => {
+  Boards.update(
+    {
+      allowsDescriptionTextOnMinicard: {
+        $exists: false,
+      },
+    },
+    {
+      $set: {
+        allowsDescriptionTextOnMinicard: true,
+      },
+    },
+    noValidateMulti,
+  );
+});
+
 Migrations.add('add-sort-field-to-boards', () => {
   Boards.find().forEach((board, index) => {
     if (!board.hasOwnProperty('sort')) {
@@ -1060,4 +1086,217 @@ Migrations.add('add-hide-logo-by-default', () => {
     },
     noValidateMulti,
   );
+});
+
+Migrations.add('add-card-number-allowed', () => {
+  Boards.update(
+    {
+      allowsCardNumber: {
+        $exists: false,
+      },
+    },
+    {
+      $set: {
+        allowsCardNumber: false,
+      },
+    },
+    noValidateMulti,
+  );
+});
+
+Migrations.add('assign-boardwise-card-numbers', () => {
+  Boards.find().forEach(board => {
+    let nextCardNumber = board.getNextCardNumber();
+    Cards.find(
+      {
+        boardId: board._id,
+        cardNumber: {
+          $exists: false
+        }
+      },
+      {
+        sort: { createdAt: 1 }
+      }
+    ).forEach(card => {
+      Cards.update(
+        card._id,
+        { $set: { cardNumber: nextCardNumber } },
+        noValidate);
+      nextCardNumber++;
+    });
+  })
+});
+
+Migrations.add('add-card-details-show-lists', () => {
+  Boards.update(
+    {
+      allowsShowLists: {
+        $exists: false,
+      },
+    },
+    {
+      $set: {
+        allowsShowLists: true,
+      },
+    },
+    noValidateMulti,
+  );
+});
+
+Migrations.add('migrate-attachments-collectionFS-to-ostrioFiles', () => {
+  //const storagePath = Attachments.storagePath();
+  const storagePath = process.env.WRITABLE_PATH || `./wekan-uploads`;
+  if (!fs.existsSync(storagePath)) {
+    console.log("create storagePath because it doesn't exist: " + storagePath);
+    fs.mkdirSync(storagePath, { recursive: true });
+  }
+  AttachmentsOld.find().forEach(function(fileObj) {
+    const newFileName = fileObj.name();
+    const filePath = path.join(storagePath, `${fileObj._id}-${newFileName}`);
+
+    // This is "example" variable, change it to the userId that you might be using.
+    const userId = fileObj.userId;
+
+    const fileType = fileObj.type();
+    const fileSize = fileObj.size();
+    const fileId = fileObj._id;
+
+    const readStream = fileObj.createReadStream('attachments');
+    const writeStream = fs.createWriteStream(filePath);
+
+    writeStream.on('error', error => {
+      console.error('[writeStream error]: ', error, filePath);
+    });
+
+    readStream.on('error', error => {
+      console.error('[readStream error]: ', error, filePath);
+    });
+
+    // Once we have a file, then upload it to our new data storage
+    readStream.on('end', () => {
+      console.log('Ended: ', filePath);
+      // UserFiles is the new Meteor-Files/FilesCollection collection instance
+
+      Attachments.addFile(
+        filePath,
+        {
+          fileName: newFileName,
+          type: fileType,
+          meta: {
+            boardId: fileObj.boardId,
+            cardId: fileObj.cardId,
+            listId: fileObj.listId,
+            swimlaneId: fileObj.swimlaneId,
+            source: 'import,'
+          },
+          userId,
+          size: fileSize,
+          fileId,
+        },
+        (error, fileRef) => {
+          if (error) {
+            console.error('[Attachments#addFile error]: ', error);
+          } else {
+            console.log('File Inserted: ', fileRef);
+            // Set the userId again
+            Attachments.update({ _id: fileRef._id }, { $set: { userId } });
+            fileObj.remove();
+          }
+        },
+        true,
+      ); // proceedAfterUpload
+    });
+
+    readStream.pipe(writeStream);
+  });
+});
+
+Migrations.add('migrate-avatars-collectionFS-to-ostrioFiles', () => {
+  //const storagePath = Avatars.storagePath();
+  const storagePath = process.env.WRITABLE_PATH || `./wekan-uploads`;
+  if (!fs.existsSync(storagePath)) {
+    console.log("create storagePath because it doesn't exist: " + storagePath);
+    fs.mkdirSync(storagePath, { recursive: true });
+  }
+  AvatarsOld.find().forEach(function(fileObj) {
+    const newFileName = fileObj.name();
+    const filePath = path.join(storagePath, `${fileObj._id}-${newFileName}`);
+
+    // This is "example" variable, change it to the userId that you might be using.
+    const userId = fileObj.userId;
+
+    const fileType = fileObj.type();
+    const fileSize = fileObj.size();
+    const fileId = fileObj._id;
+
+    const readStream = fileObj.createReadStream('avatars');
+    const writeStream = fs.createWriteStream(filePath);
+
+    writeStream.on('error', error => {
+      console.error('[writeStream error]: ', error, filePath);
+    });
+
+    readStream.on('error', error => {
+      console.error('[readStream error]: ', error, filePath);
+    });
+
+    // Once we have a file, then upload it to our new data storage
+    readStream.on('end', () => {
+      console.log('Ended: ', filePath);
+      // UserFiles is the new Meteor-Files/FilesCollection collection instance
+
+      Avatars.addFile(
+        filePath,
+        {
+          fileName: newFileName,
+          type: fileType,
+          meta: {
+            boardId: fileObj.boardId,
+            cardId: fileObj.cardId,
+            listId: fileObj.listId,
+            swimlaneId: fileObj.swimlaneId,
+          },
+          userId,
+          size: fileSize,
+          fileId,
+        },
+        (error, fileRef) => {
+          if (error) {
+            console.error('[Avatars#addFile error]: ', error);
+          } else {
+            console.log('File Inserted: ', newFileName, fileRef);
+            // Set the userId again
+            Avatars.update({ _id: fileRef._id }, { $set: { userId } });
+            Users.find().forEach(user => {
+              const old_url = fileObj.url();
+              new_url = Avatars.findOne({ _id: fileRef._id }).link(
+                'original',
+                '/',
+              );
+              if (user.profile.avatarUrl.startsWith(old_url)) {
+                // Set avatar url to new url
+                Users.direct.update(
+                  { _id: user._id },
+                  { $set: { 'profile.avatarUrl': new_url } },
+                  noValidate,
+                );
+                console.log('User avatar updated: ', user._id, new_url);
+              }
+            });
+            fileObj.remove();
+          }
+        },
+        true, // proceedAfterUpload
+      );
+    });
+
+    readStream.pipe(writeStream);
+  });
+});
+
+Migrations.add('migrate-attachment-drop-index-cardId', () => {
+  try {
+    Attachments.collection._dropIndex({'cardId': 1});
+  } catch (error) {
+  }
 });

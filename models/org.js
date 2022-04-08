@@ -143,14 +143,40 @@ if (Meteor.isServer) {
         }
       }
     },
+    setCreateOrgFromOidc(
+      orgDisplayName,
+      orgDesc,
+      orgShortName,
+      orgWebsite,
+      orgIsActive,
+    ) {
+      check(orgDisplayName, String);
+      check(orgDesc, String);
+      check(orgShortName, String);
+      check(orgWebsite, String);
+      check(orgIsActive, Boolean);
 
+      const nOrgNames = Org.find({ orgShortName }).count();
+      if (nOrgNames > 0) {
+        throw new Meteor.Error('orgname-already-taken');
+      } else {
+        Org.insert({
+          orgDisplayName,
+          orgDesc,
+          orgShortName,
+          orgWebsite,
+          orgIsActive,
+        });
+      }
+    },
     setOrgDisplayName(org, orgDisplayName) {
       if (Meteor.user() && Meteor.user().isAdmin) {
         check(org, Object);
         check(orgDisplayName, String);
         Org.update(org, {
-          $set: { orgDisplayName: orgDisplayNameorgShortName },
+          $set: { orgDisplayName: orgDisplayName },
         });
+        Meteor.call('setUsersOrgsOrgDisplayName', org._id, orgDisplayName);
       }
     },
 
@@ -183,7 +209,31 @@ if (Meteor.isServer) {
         });
       }
     },
-
+    setOrgAllFieldsFromOidc(
+      org,
+      orgDisplayName,
+      orgDesc,
+      orgShortName,
+      orgWebsite,
+      orgIsActive,
+    ) {
+      check(org, Object);
+      check(orgDisplayName, String);
+      check(orgDesc, String);
+      check(orgShortName, String);
+      check(orgWebsite, String);
+      check(orgIsActive, Boolean);
+      Org.update(org, {
+        $set: {
+          orgDisplayName: orgDisplayName,
+          orgDesc: orgDesc,
+          orgShortName: orgShortName,
+          orgWebsite: orgWebsite,
+          orgIsActive: orgIsActive,
+        },
+      });
+      Meteor.call('setUsersOrgsOrgDisplayName', org._id, orgDisplayName);
+    },
     setOrgAllFields(
       org,
       orgDisplayName,
@@ -208,6 +258,7 @@ if (Meteor.isServer) {
             orgIsActive: orgIsActive,
           },
         });
+        Meteor.call('setUsersOrgsOrgDisplayName', org._id, orgDisplayName);
       }
     },
   });
@@ -217,7 +268,7 @@ if (Meteor.isServer) {
   // Index for Organization name.
   Meteor.startup(() => {
     // Org._collection._ensureIndex({ name: -1 });
-    Org._collection._ensureIndex({ orgDisplayName: -1 });
+    Org._collection._ensureIndex({ orgDisplayName: 1 });
   });
 }
 

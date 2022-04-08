@@ -345,6 +345,17 @@ Lists.mutations({
   },
 });
 
+Lists.userArchivedLists = userId => {
+  return Lists.find({
+    boardId: { $in: Boards.userBoardIds(userId, null) },
+    archived: true,
+  })
+};
+
+Lists.userArchivedListIds = () => {
+  return Lists.userArchivedLists().map(list => { return list._id; });
+};
+
 Lists.archivedLists = () => {
   return Lists.find({ archived: true });
 };
@@ -467,8 +478,8 @@ if (Meteor.isServer) {
    */
   JsonRoutes.add('GET', '/api/boards/:boardId/lists', function(req, res) {
     try {
+      Authentication.checkUserId(req.userId);
       const paramBoardId = req.params.boardId;
-      Authentication.checkBoardAccess(req.userId, paramBoardId);
 
       JsonRoutes.sendResult(res, {
         code: 200,
@@ -502,9 +513,9 @@ if (Meteor.isServer) {
     res,
   ) {
     try {
+      Authentication.checkUserId(req.userId);
       const paramBoardId = req.params.boardId;
       const paramListId = req.params.listId;
-      Authentication.checkBoardAccess(req.userId, paramBoardId);
       JsonRoutes.sendResult(res, {
         code: 200,
         data: Lists.findOne({
@@ -531,8 +542,8 @@ if (Meteor.isServer) {
    */
   JsonRoutes.add('POST', '/api/boards/:boardId/lists', function(req, res) {
     try {
+      Authentication.checkUserId(req.userId);
       const paramBoardId = req.params.boardId;
-      Authentication.checkBoardAccess(req.userId, paramBoardId);
       const board = Boards.findOne(paramBoardId);
       const id = Lists.insert({
         title: req.body.title,
@@ -569,8 +580,8 @@ if (Meteor.isServer) {
     res,
   ) {
     try {
+      Authentication.checkUserId(req.userId);
       const paramBoardId = req.params.boardId;
-      Authentication.checkBoardAccess(req.userId, paramBoardId);
       const paramListId = req.params.listId;
       Lists.remove({ _id: paramListId, boardId: paramBoardId });
       JsonRoutes.sendResult(res, {

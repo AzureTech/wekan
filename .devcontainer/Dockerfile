@@ -1,4 +1,4 @@
-FROM quay.io/wekan/ubuntu:groovy-20210115
+FROM ubuntu:rolling
 LABEL maintainer="sgr"
 
 ENV BUILD_DEPS="gnupg gosu libarchive-tools wget curl bzip2 g++ build-essential python git ca-certificates iproute2"
@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ENV \
     DEBUG=false \
-    NODE_VERSION=v12.22.1 \
+    NODE_VERSION=v14.19.1 \
     METEOR_RELEASE=1.10.2 \
     USE_EDGE=false \
     METEOR_EDGE=1.5-beta.17 \
@@ -22,6 +22,7 @@ ENV \
     ACCOUNTS_LOCKOUT_UNKNOWN_USERS_FAILURES_BERORE=3 \
     ACCOUNTS_LOCKOUT_UNKNOWN_USERS_LOCKOUT_PERIOD=60 \
     ACCOUNTS_LOCKOUT_UNKNOWN_USERS_FAILURE_WINDOW=15 \
+    ACCOUNTS_COMMON_LOGIN_EXPIRATION_IN_DAYS=90 \
     RICHER_CARD_COMMENT_EDITOR=false \
     CARD_OPENED_WEBHOOK_ENABLED=false \
     ATTACHMENTS_STORE_PATH="" \
@@ -131,7 +132,16 @@ ENV \
     SAML_IDENTIFIER_FORMAT="" \
     SAML_LOCAL_PROFILE_MATCH_ATTRIBUTE="" \
     SAML_ATTRIBUTES="" \
-    DEFAULT_WAIT_SPINNER=""
+    DEFAULT_WAIT_SPINNER="" \
+    NODE_OPTIONS="--max_old_space_size=4096"
+
+#---------------------------------------------------------------------
+# https://github.com/wekan/wekan/issues/3585#issuecomment-1021522132
+# Add more Node heap:
+#   NODE_OPTIONS="--max_old_space_size=4096"
+# Add more stack:
+#   bash -c "ulimit -s 65500; exec node --stack-size=65500 main.js"
+#---------------------------------------------------------------------
 
 # Install OS
 RUN set -o xtrace \
@@ -196,6 +206,10 @@ COPY \
     /home/wekan/app/
 
 COPY \
+    tests \
+    /home/wekan/app/tests/
+
+COPY \
     packages \
     /home/wekan/app/packages/
 
@@ -224,10 +238,35 @@ RUN \
     set -o xtrace && \
     cd /home/wekan/app_build/bundle/programs/server/ && \
     chmod u+w package.json npm-shrinkwrap.json && \
-    npm install
+    npm install && \
+    cd node_modules/fibers && \
+    node build.js
+
+USER root
+# Cleanup
+RUN \
+    set -o xtrace && \
+    apt-get clean -y && \
+    apt-get autoremove -y && \
+    rm -Rf /tmp/* && \
+    rm -Rf /home/wekan/app_build && \
+    rm -Rf /var/cache/apt /var/lib/apt/lists && \
+    rm -Rf /var/lib/apt/lists/*
+
+USER wekan
 
 ENV PORT=3000
 EXPOSE $PORT
 WORKDIR /home/wekan/app
+
+#---------------------------------------------------------------------
+# https://github.com/wekan/wekan/issues/3585#issuecomment-1021522132
+# Add more Node heap:
+#   NODE_OPTIONS="--max_old_space_size=4096"
+# Add more stack:
+#   bash -c "ulimit -s 65500; exec node --stack-size=65500 main.js"
+#---------------------------------------------------------------------
+#TODO:
+#CMD ["bash", "-c", "ulimit -s 65500; exec node --stack-size=65500 /build/main.js"]
 
 CMD ["/home/wekan/.meteor/meteor", "run", "--verbose", "--settings", "settings.json"]

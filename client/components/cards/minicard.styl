@@ -80,8 +80,6 @@
 
   .minicard-labels
     float: none
-    display: flex
-    flex-wrap: wrap
 
     .minicard-label
       width: 11px
@@ -89,6 +87,10 @@
       border-radius: 2px
       margin-right: 3px
       margin-bottom: 3px
+
+  .minicard-labels-no-text
+    display: flex
+    flex-wrap: wrap
 
   .minicard-custom-fields
     display:block;
@@ -114,6 +116,10 @@
       font-size:20px;
       color: #ccc;
   .minicard-title
+    .card-number
+      color: darken(white, 30%);
+      display: inline-block;
+      margin-right: 5px;
     p:last-child
       margin-bottom: 0
     .viewer
@@ -195,6 +201,16 @@
   .minicard-assignees:empty
     display: none
 
+  .minicard-description {
+    padding: 6px 0 6px 8px
+    background-color: #eee
+    width: 100%
+    margin-bottom: 2px
+    margin-left: -4px
+    border-radius: 3px
+    display: inline-block
+  }
+
   &.minicard-composer
     margin-bottom: 10px
 
@@ -228,10 +244,12 @@
       z-index: 15
       box-shadow: 0 1px 2px rgba(0,0,0,.15)
 
+/* https://github.com/wekan/wekan/issues/4254#issuecomment-1037192960 */
+
 minicard-color(background, color...)
-  background-color: background
+  background-color: background !important
   if color
-    color: color //overwrite text for better visibility
+    color: color !important //overwrite text for better visibility
   &:hover:not(.minicard-composer),
   .is-selected &,
   .draggable-hover-card &

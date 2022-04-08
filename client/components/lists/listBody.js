@@ -13,6 +13,13 @@ BlazeComponent.extendComponent({
     return [];
   },
 
+  customFieldsSum() {
+    return CustomFields.find({
+      boardIds: { $in: [Session.get('currentBoard')] },
+      showSumAtTopOfList: true,
+    });
+  },
+
   openForm(options) {
     options = options || {};
     options.position = options.position || 'top';
@@ -81,7 +88,9 @@ BlazeComponent.extendComponent({
         Utils.boardView() === 'board-view-cal' ||
         !Utils.boardView()
       )
-        swimlaneId = board.getDefaultSwimline()._id;
+      swimlaneId = board.getDefaultSwimline()._id;
+
+      const nextCardNumber = board.getNextCardNumber();
 
       const _id = Cards.insert({
         title,
@@ -93,6 +102,7 @@ BlazeComponent.extendComponent({
         sort: sortIndex,
         swimlaneId,
         type: cardType,
+        cardNumber: nextCardNumber,
         linkedId,
       });
 
@@ -138,6 +148,10 @@ BlazeComponent.extendComponent({
       // If the card is already selected, we want to de-select it.
       // XXX We should probably modify the minicard href attribute instead of
       // overwriting the event in case the card is already selected.
+    } else if (Utils.isMiniScreen()) {
+      evt.preventDefault();
+      Session.set('popupCardId', this.currentData()._id);
+      this.cardDetailsPopup(evt);
     } else if (Session.equals('currentCard', this.currentData()._id)) {
       evt.stopImmediatePropagation();
       evt.preventDefault();
@@ -206,6 +220,12 @@ BlazeComponent.extendComponent({
     );
   },
 
+  cardDetailsPopup(event) {
+    if (!Popup.isOpen()) {
+      Popup.open("cardDetails")(event);
+    }
+  },
+
   events() {
     return [
       {
@@ -241,7 +261,7 @@ BlazeComponent.extendComponent({
       Boards.findOne(currentBoardId)
         .customFields()
         .fetch(),
-      function(field) {
+      function (field) {
         if (field.automaticallyOnCard || field.alwaysOnCard)
           arr.push({ _id: field._id, value: null });
       },
@@ -257,9 +277,12 @@ BlazeComponent.extendComponent({
 
   getLabels() {
     const currentBoardId = Session.get('currentBoard');
-    return Boards.findOne(currentBoardId).labels.filter(label => {
-      return this.labels.get().indexOf(label._id) > -1;
-    });
+    if (Boards.findOne(currentBoardId).labels) {
+      return Boards.findOne(currentBoardId).labels.filter(label => {
+        return this.labels.get().indexOf(label._id) > -1;
+      });
+    }
+    return false;
   },
 
   pressKey(evt) {
@@ -313,7 +336,7 @@ BlazeComponent.extendComponent({
       [
         // User mentions
         {
-          match: /\B@([\w.]*)$/,
+          match: /\B@([\w.-]*)$/,
           search(term, callback) {
             const currentBoard = Boards.findOne(Session.get('currentBoard'));
             callback(
@@ -324,6 +347,9 @@ BlazeComponent.extendComponent({
             );
           },
           template(user) {
+            if (user.profile && user.profile.fullname) {
+              return (user.username + " (" + user.profile.fullname + ")");
+            }
             return user.username;
           },
           replace(user) {
@@ -340,6 +366,9 @@ BlazeComponent.extendComponent({
             const currentBoard = Boards.findOne(Session.get('currentBoard'));
             callback(
               $.map(currentBoard.labels, label => {
+                if (label.name == undefined) {
+                  label.name = "";
+                }
                 if (
                   label.name.indexOf(term) > -1 ||
                   label.color.indexOf(term) > -1
@@ -476,7 +505,7 @@ BlazeComponent.extendComponent({
           evt.preventDefault();
           const linkedId = $('.js-select-cards option:selected').val();
           if (!linkedId) {
-            Popup.close();
+            Popup.back();
             return;
           }
           const _id = Cards.insert({
@@ -491,7 +520,7 @@ BlazeComponent.extendComponent({
             linkedId,
           });
           Filter.addException(_id);
-          Popup.close();
+          Popup.back();
         },
         'click .js-link-board'(evt) {
           //LINK BOARD
@@ -502,7 +531,7 @@ BlazeComponent.extendComponent({
             !impBoardId ||
             Cards.findOne({ linkedId: impBoardId, archived: false })
           ) {
-            Popup.close();
+            Popup.back();
             return;
           }
           const _id = Cards.insert({
@@ -517,7 +546,7 @@ BlazeComponent.extendComponent({
             linkedId: impBoardId,
           });
           Filter.addException(_id);
-          Popup.close();
+          Popup.back();
         },
       },
     ];
@@ -549,7 +578,8 @@ BlazeComponent.extendComponent({
       this.isBoardTemplateSearch;
     let board = {};
     if (this.isTemplateSearch) {
-      board = Boards.findOne((Meteor.user().profile || {}).templatesBoardId);
+      //board = Boards.findOne((Meteor.user().profile || {}).templatesBoardId);
+      board._id = (Meteor.user().profile || {}).templatesBoardId;
     } else {
       // Prefetch first non-current board id
       board = Boards.find({
@@ -564,7 +594,7 @@ BlazeComponent.extendComponent({
       });
     }
     if (!board) {
-      Popup.close();
+      Popup.back();
       return;
     }
     const boardId = board._id;
@@ -688,10 +718,15 @@ BlazeComponent.extendComponent({
               },
               (err, data) => {
                 _id = data;
+                subManager.subscribe('board', _id, false);
+                FlowRouter.go('board', {
+                  id: _id,
+                  slug: getSlug(element.title),
+                });
               },
             );
           }
-          Popup.close();
+          Popup.back();
         },
       },
     ];
@@ -750,17 +785,17 @@ BlazeComponent.extendComponent({
 
   checkIdleTime() {
     return window.requestIdleCallback ||
-    function(handler) {
-      const startTime = Date.now();
-      return setTimeout(function() {
-        handler({
-          didTimeout: false,
-          timeRemaining() {
-            return Math.max(0, 50.0 - (Date.now() - startTime));
-          },
-        });
-      }, 1);
-    };
+      function (handler) {
+        const startTime = Date.now();
+        return setTimeout(function () {
+          handler({
+            didTimeout: false,
+            timeRemaining() {
+              return Math.max(0, 50.0 - (Date.now() - startTime));
+            },
+          });
+        }, 1);
+      };
   }
 
   updateList() {
@@ -779,17 +814,12 @@ BlazeComponent.extendComponent({
       return false;
     }
 
+    const spinnerViewPosition = this.spinner.offsetTop - this.container.offsetTop + this.spinner.clientHeight;
+
     const parentViewHeight = this.container.clientHeight;
     const bottomViewPosition = this.container.scrollTop + parentViewHeight;
 
-    let spinnerOffsetTop = this.spinner.offsetTop;
-
-    const addCard = $(this.container).find("a.open-minicard-composer").first()[0];
-    if (addCard !== undefined) {
-      spinnerOffsetTop -= addCard.clientHeight;
-    }
-
-    return bottomViewPosition > spinnerOffsetTop;
+    return bottomViewPosition > spinnerViewPosition;
   }
 
   getSkSpinnerName() {

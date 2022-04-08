@@ -102,6 +102,19 @@ Checklists.helpers({
       isFinished: true,
     }).count();
   },
+  /** returns the finished percent of the checklist */
+  finishedPercent() {
+    const checklistItems = ChecklistItems.find({ checklistId: this._id });
+    const count = checklistItems.count();
+    const checklistItemsFinished = checklistItems.fetch().filter(checklistItem => checklistItem.isFinished);
+
+    let ret = 0;
+
+    if (count > 0) {
+      ret = Math.round(checklistItemsFinished.length / count * 100);
+    }
+    return ret;
+  },
   isFinished() {
     return 0 !== this.itemCount() && this.itemCount() === this.finishedCount();
   },
@@ -146,6 +159,37 @@ Checklists.before.insert((userId, doc) => {
 Checklists.mutations({
   setTitle(title) {
     return { $set: { title } };
+  },
+  /** move the checklist to another card
+   * @param newCardId move the checklist to this cardId
+   */
+  move(newCardId) {
+    // update every activity
+    Activities.find(
+      {checklistId: this._id}
+    ).forEach(activity => {
+      Activities.update(activity._id, {
+        $set: {
+          cardId: newCardId,
+        },
+      });
+    });
+    // update every checklist-item
+    ChecklistItems.find(
+      {checklistId: this._id}
+    ).forEach(checklistItem => {
+      ChecklistItems.update(checklistItem._id, {
+        $set: {
+          cardId: newCardId,
+        },
+      });
+    });
+    // update the checklist itself
+    return {
+      $set: {
+        cardId: newCardId,
+      },
+    };
   },
 });
 
@@ -204,8 +248,8 @@ if (Meteor.isServer) {
     'GET',
     '/api/boards/:boardId/cards/:cardId/checklists',
     function(req, res) {
+      Authentication.checkUserId(req.userId);
       const paramBoardId = req.params.boardId;
-      Authentication.checkBoardAccess(req.userId, paramBoardId);
       const paramCardId = req.params.cardId;
       const checklists = Checklists.find({ cardId: paramCardId }).map(function(
         doc,
@@ -248,8 +292,8 @@ if (Meteor.isServer) {
     'GET',
     '/api/boards/:boardId/cards/:cardId/checklists/:checklistId',
     function(req, res) {
+      Authentication.checkUserId(req.userId);
       const paramBoardId = req.params.boardId;
-      Authentication.checkBoardAccess(req.userId, paramBoardId);
       const paramChecklistId = req.params.checklistId;
       const paramCardId = req.params.cardId;
       const checklist = Checklists.findOne({
@@ -292,8 +336,9 @@ if (Meteor.isServer) {
     'POST',
     '/api/boards/:boardId/cards/:cardId/checklists',
     function(req, res) {
+      Authentication.checkUserId(req.userId);
       // Check user is logged in
-      Authentication.checkLoggedIn(req.userId);
+      //Authentication.checkLoggedIn(req.userId);
       const paramBoardId = req.params.boardId;
       // Check user has permission to add checklist to the card
       const board = Boards.findOne({
@@ -353,8 +398,8 @@ if (Meteor.isServer) {
     'DELETE',
     '/api/boards/:boardId/cards/:cardId/checklists/:checklistId',
     function(req, res) {
+      Authentication.checkUserId(req.userId);
       const paramBoardId = req.params.boardId;
-      Authentication.checkBoardAccess(req.userId, paramBoardId);
       const paramChecklistId = req.params.checklistId;
       Checklists.remove({ _id: paramChecklistId });
       JsonRoutes.sendResult(res, {

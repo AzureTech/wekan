@@ -4,15 +4,6 @@
 
 avatar-radius = 50%
 
-#cardURL_copy
-  // Have clipboard text not visible by moving it to far left
-  position: absolute
-  left: -2000px
-  top: 0px
-
-#clipboard
-  white-space: normal
-
 .assignee
   border-radius: 3px
   display: block
@@ -85,6 +76,12 @@ avatar-radius = 50%
       box-shadow: 0 0 0 2px darken(white, 60%) inset
 
 // Other card details
+.copied-tooltip
+  display: none
+  padding: 0px 10px;
+  background-color: #000000df;
+  color: #fff;
+  border-radius: 5px;
 
 .card-details
   padding: 0
@@ -95,7 +92,7 @@ avatar-radius = 50%
   overflow-x: hidden
   background: darken(white, 3%)
   border-radius: bottom 3px
-  z-index: 20 !important
+  z-index: 20
   animation: flexGrowIn 0.1s
   box-shadow: 0 0 7px 0 darken(white, 30%)
   transition: flex-basis 0.1s
@@ -113,6 +110,15 @@ avatar-radius = 50%
     padding: 7px 20px
     background: darken(white, 7%)
     border-bottom: 1px solid darken(white, 14%)
+    position: sticky
+    top: 0px
+    z-index: 500
+
+    .card-number {
+      color: darken(white, 30%);
+      display: inline-block;
+      margin-right: 5px;
+    }
 
     .close-card-details,
     .maximize-card-details,
@@ -121,7 +127,8 @@ avatar-radius = 50%
     .card-copy-button,
     .card-copy-mobile-button,
     .close-card-details-mobile-web,
-    .card-details-menu-mobile-web
+    .card-details-menu-mobile-web,
+    .copied-tooltip
       float: right
 
     .close-card-details,
@@ -177,6 +184,9 @@ avatar-radius = 50%
       margin-top: 5px
       margin-bottom: 10px
 
+      .copied-tooltip
+        padding: 0px 10px
+
     .card-details-list
       font-size: 0.85em
       margin-bottom: 3px
@@ -190,6 +200,10 @@ avatar-radius = 50%
           border-radius: 3px
           padding: 0px 5px
 
+    .copied-tooltip
+      margin-right: 10px
+      padding: 10px;
+
   .card-description textarea
     min-height: 100px
 
@@ -200,13 +214,13 @@ avatar-radius = 50%
 
     .card-details-item
       margin-right: 0.5em
+      flex-grow: 1
       &:last-child
         margin-right: 0
       &.card-details-item-labels
         display: block
         word-wrap: break-word
         max-width: 95%
-        flex-grow: 1
       &.card-details-item-members,
       &.card-details-item-assignees,
       &.card-details-item-customfield,
@@ -214,7 +228,6 @@ avatar-radius = 50%
         display: block
         word-wrap: break-word
         max-width: 36%
-        flex-grow: 1
       &.card-details-item-creator,
       &.card-details-item-received,
       &.card-details-item-start,
@@ -223,56 +236,56 @@ avatar-radius = 50%
         display: block
         word-wrap: break-word
         max-width: 28%
-        flex-grow: 1
+      &.custom-fields
+        padding-left: 10px
+
 
   .card-details-item-title
     font-size: 16px
     font-weight: bold
     color: #4d4d4d
 
-  .card-label
-    padding-top: 5px
-    padding-bottom: 5px
-
   .activities
     padding-top: 10px
 
-.card-details-maximized
-  padding: 0
-  flex-shrink: 0
-  flex-basis: calc(100% - 20px)
-  will-change: flex-basis
-  overflow-y: scroll
-  overflow-x: scroll
-  background: darken(white, 3%)
-  border-radius: bottom 3px
-  z-index: 1000 !important
-  animation: flexGrowIn 0.1s
-  box-shadow: 0 0 7px 0 darken(white, 30%)
-  transition: flex-basis 0.1s
-  box-sizing: border-box
-  position: absolute
-  top: 0
-  left: 0
-  height: calc(100% - 20px)
-  width: calc(100% - 20px)
-  float: left
-
-  .card-details-left
+@media screen and (min-width: 801px)
+  .card-details-maximized
+    padding: 0
+    flex-shrink: 0
+    flex-basis: calc(100% - 20px)
+    will-change: flex-basis
+    overflow-y: scroll
+    overflow-x: scroll
+    background: darken(white, 3%)
+    border-radius: bottom 3px
+    z-index: 100
+    animation: flexGrowIn 0.1s
+    box-shadow: 0 0 7px 0 darken(white, 30%)
+    transition: flex-basis 0.1s
+    box-sizing: border-box
     position: absolute
+    top: 0
+    left: 0
+    height: calc(100% - 20px)
+    width: calc(100% - 20px)
     float: left
-    top: 60px
-    left: 20px
-    width: 47%
 
-  .card-details-right
-    position: absolute
-    float: right
-    top: 20px
-    left: 50%
+    .card-details-left
+      float: left
+      top: 60px
+      left: 20px
+      width: 47%
+      border-right: solid 2px #dbdbdb
+      padding-right: 10px
 
-  .card-details-header
-    width: 47%
+    .card-details-right
+      position: absolute
+      float: right
+      left: 50%
+      margin: 15px 0
+
+    .card-details-header
+      width: 100%
 
 input[type="text"].attachment-add-link-input
   float: left
@@ -291,6 +304,8 @@ input[type="submit"].attachment-add-link-submit
     padding: 0px 20px 0px 20px
     margin: 0px
     transition: none
+    overflow-y: revert
+    overflow-x: revert
 
     .card-details-canvas
       width: 100%
@@ -308,6 +323,21 @@ input[type="submit"].attachment-add-link-submit
 
       .minimize-card-details
         margin-right: 40px
+
+  .card-details-popup
+    padding: 0px 10px
+
+  .pop-over > .content-wrapper > .popup-container-depth-0
+    width: 100%
+
+    & > .content
+      width: calc(100% - 10px)
+
+    & > .content > .card-details-popup hr
+        margin: 15px 0px
+
+      .card-details-header
+        margin: 0
 
 card-details-color(background, color...)
   background: background !important
