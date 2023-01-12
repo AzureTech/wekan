@@ -1,3 +1,5 @@
+import { TAPi18n } from '/imports/i18n';
+
 const subManager = new SubsManager();
 const { calculateIndex } = Utils;
 const swimlaneWhileSortingHeight = 150;
@@ -191,7 +193,7 @@ BlazeComponent.extendComponent({
     });
 
     this.autorun(() => {
-      if (Utils.isMiniScreenOrShowDesktopDragHandles()) {
+      if (Utils.isTouchScreenOrShowDesktopDragHandles()) {
         $swimlanesDom.sortable({
           handle: '.js-swimlane-header-handle',
         });
@@ -226,10 +228,10 @@ BlazeComponent.extendComponent({
     }
   },
 
-  notDisplayThisBoard(){
+  notDisplayThisBoard() {
     let allowPrivateVisibilityOnly = TableVisibilityModeSettings.findOne('tableVisibilityMode-allowPrivateOnly');
     let currentBoard = Boards.findOne(Session.get('currentBoard'));
-    if(allowPrivateVisibilityOnly !== undefined && allowPrivateVisibilityOnly.booleanValue && currentBoard.permission == 'public'){
+    if (allowPrivateVisibilityOnly !== undefined && allowPrivateVisibilityOnly.booleanValue && currentBoard.permission == 'public') {
       return true;
     }
 
@@ -267,9 +269,10 @@ BlazeComponent.extendComponent({
 
   openNewListForm() {
     if (this.isViewSwimlanes()) {
-      this.childComponents('swimlane')[0]
-        .childComponents('addListAndSwimlaneForm')[0]
-        .open();
+      // The form had been removed in 416b17062e57f215206e93a85b02ef9eb1ab4902
+      // this.childComponents('swimlane')[0]
+      //   .childComponents('addListAndSwimlaneForm')[0]
+      //   .open();
     } else if (this.isViewLists()) {
       this.childComponents('listsGroup')[0]
         .childComponents('addListForm')[0]
@@ -316,7 +319,7 @@ BlazeComponent.extendComponent({
 
 BlazeComponent.extendComponent({
   onRendered() {
-    this.autorun(function() {
+    this.autorun(function () {
       $('#calendar-view').fullCalendar('refetchEvents');
     });
   },
@@ -348,7 +351,7 @@ BlazeComponent.extendComponent({
       events(start, end, timezone, callback) {
         const currentBoard = Boards.findOne(Session.get('currentBoard'));
         const events = [];
-        const pushEvent = function(card, title, start, end, extraCls) {
+        const pushEvent = function (card, title, start, end, extraCls) {
           start = start || card.startAt;
           end = end || card.endAt;
           title = title || card.title;
@@ -372,12 +375,12 @@ BlazeComponent.extendComponent({
         };
         currentBoard
           .cardsInInterval(start.toDate(), end.toDate())
-          .forEach(function(card) {
+          .forEach(function (card) {
             pushEvent(card);
           });
         currentBoard
           .cardsDueInBetween(start.toDate(), end.toDate())
-          .forEach(function(card) {
+          .forEach(function (card) {
             pushEvent(
               card,
               `${card.title} ${TAPi18n.__('card-due')}`,
@@ -385,7 +388,7 @@ BlazeComponent.extendComponent({
               new Date(card.dueAt.getTime() + 36e5),
             );
           });
-        events.sort(function(first, second) {
+        events.sort(function (first, second) {
           return first.id > second.id ? 1 : -1;
         });
         callback(events);
@@ -408,8 +411,10 @@ BlazeComponent.extendComponent({
         if (card) {
           // TODO: add a flag for allDay events
           if (!event.allDay) {
-            card.setStart(event.start.toDate());
-            card.setEnd(event.end.toDate());
+            // https://github.com/wekan/wekan/issues/2917#issuecomment-1236753962
+            //card.setStart(event.start.toDate());
+            //card.setEnd(event.end.toDate());
+            card.setDue(event.start.toDate());
             isOk = true;
           }
         }

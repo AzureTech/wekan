@@ -98,7 +98,7 @@ services:
     # Quay image does work:
     #   image: quay.io/wekan/mongo:4.4.2-bionic
     # Docker Hub MongoDB image does work:
-    image: mongo:4.4
+    image: mongo:6
     #-------------------------------------------------------------------------------------
     container_name: wekan-db
     restart: always
@@ -127,6 +127,13 @@ services:
     # image: wekanteam/wekan
     #-------------------------------------------------------------------------------------
     container_name: wekan-app
+    # On CentOS 7 there is seccomp issue with glibc 6,
+    # so CentOS 7 users shoud use these security_opt seccomp:unconfined
+    # settings to get WeKan working. See:
+    #   - https://github.com/wekan/wekan/issues/4585
+    #   - https://github.com/wekan/wekan/issues/4587
+    #security_opt:
+    #  - seccomp:unconfined
     restart: always
     networks:
       - wekan-tier
@@ -147,6 +154,14 @@ services:
       #-----------------------------------------------------------------
       # ==== WRITEABLE PATH FOR FILE UPLOADS ====
       - WRITABLE_PATH=/data
+      #-----------------------------------------------------------------
+      # ==== AWS S3 FOR FILES ====
+      # Any region. For example:
+      #   us-standard,us-west-1,us-west-2,
+      #   eu-west-1,eu-central-1,
+      #   ap-southeast-1,ap-northeast-1,sa-east-1
+      #
+      #- S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx"}}'
       #-----------------------------------------------------------------
       # ==== MONGO_URL ====
       - MONGO_URL=mongodb://wekandb:27017/wekan
@@ -260,6 +275,16 @@ services:
       # https://github.com/wekan/wekan/issues/2518
       - CARD_OPENED_WEBHOOK_ENABLED=false
       #---------------------------------------------------------------
+      # ==== Allow configuration to validate uploaded attachments ====
+      #-ATTACHMENTS_UPLOAD_EXTERNAL_PROGRAM=/usr/local/bin/avscan {file}
+      #-ATTACHMENTS_UPLOAD_MIME_TYPES=image/*,text/*
+      #-ATTACHMENTS_UPLOAD_MAX_SIZE=5000000
+      #---------------------------------------------------------------
+      # ==== Allow configuration to validate uploaded avatars ====
+      #-AVATARS_UPLOAD_EXTERNAL_PROGRAM=/usr/local/bin/avscan {file}
+      #-AVATARS_UPLOAD_MIME_TYPES=image/*
+      #-AVATARS_UPLOAD_MAX_SIZE=500000
+      #---------------------------------------------------------------
       # ==== Allow to shrink attached/pasted image ====
       # https://github.com/wekan/wekan/pull/2544
       #-MAX_IMAGE_PIXEL=1024
@@ -330,12 +355,20 @@ services:
       # When browser policy is enabled, HTML code at this Trusted URL can have iframe that embeds Wekan inside.
       #- TRUSTED_URL=https://intra.example.com
       #-----------------------------------------------------------------
+      # ==== METRICS ALLOWED IP ADDRESSES ====
+      # https://github.com/wekan/wekan/wiki/Metrics
+      #- METRICS_ALLOWED_IP_ADDRESSES=192.168.0.100,192.168.0.200
+      #-----------------------------------------------------------------
       # ==== OUTGOING WEBHOOKS ====
       # What to send to Outgoing Webhook, or leave out. If commented out the default values will be: cardId,listId,oldListId,boardId,comment,user,card,commentId,swimlaneId,customerField,customFieldValue
       #- WEBHOOKS_ATTRIBUTES=cardId,listId,oldListId,boardId,comment,user,card,commentId
       #-----------------------------------------------------------------
       # ==== Debug OIDC OAuth2 etc ====
       #- DEBUG=true
+      #---------------------------------------------
+      # ==== AUTOLOGIN WITH OIDC/OAUTH2 ====
+      # https://github.com/wekan/wekan/wiki/autologin
+      #- OIDC_REDIRECTION_ENABLED=true
       #-----------------------------------------------------------------
       # ==== OAUTH2 ORACLE on premise identity manager OIM ====
       #- ORACLE_OIM_ENABLED=true
@@ -448,6 +481,7 @@ services:
       # Note: Do not add single quotes '' to variables. Having spaces still works without quotes where required.
       #
       # The default authentication method used if a user does not exist to create and authenticate. Can be set as ldap.
+      # (this is set properly in the Admin Panel, changing this item does not remove Password login option)
       #- DEFAULT_AUTHENTICATION_METHOD=ldap
       #
       # Enable or not the connection by the LDAP

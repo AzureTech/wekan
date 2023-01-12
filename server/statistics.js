@@ -86,6 +86,7 @@ if (Meteor.isServer) {
           mongoOplogEnabled = oplogEnabled;
         } catch (e) {
           try {
+            const { mongo } = MongoInternals.defaultRemoteCollectionDriver();
             const { version } = Promise.await(
               mongo.db.command({ buildinfo: 1 }),
             );
@@ -100,6 +101,11 @@ if (Meteor.isServer) {
           mongoVersion,
           mongoStorageEngine,
           mongoOplogEnabled,
+        };
+        const client = MongoInternals.defaultRemoteCollectionDriver()?.mongo?.client;
+        const sessionsCount = client?.s?.activeSessions?.size;
+        statistics.session = {
+          sessionsCount: sessionsCount,
         };
         return statistics;
       } else {

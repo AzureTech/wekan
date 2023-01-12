@@ -36,8 +36,21 @@ for(var i=0; i<urlschemes.length;i++){
 }
 
 var emoji = require('markdown-it-emoji');
+var mathjax = require('markdown-it-mathjax3');
 Markdown.use(emoji);
-Markdown.use(markdownItMermaid);
+Markdown.use(mathjax);
+
+// Try to fix Mermaid Diagram error: Maximum call stack size exceeded.
+// Added bigger text size for Diagram.
+// https://github.com/wekan/wekan/issues/4251
+// https://stackoverflow.com/questions/66825888/maximum-text-size-in-diagram-exceeded-mermaid-js
+// https://github.com/mermaid-js/mermaid/blob/74b1219d62dd76d98d60abeeb36d4520f64faceb/src/defaultConfig.js#L39
+// https://github.com/wekan/cli-table3
+// https://www.npmjs.com/package/@wekanteam/markdown-it-mermaid
+// https://github.com/wekan/markdown-it-mermaid
+Markdown.use(markdownItMermaid,{
+  maxTextSize: 200000,
+});
 
 if (Package.ui) {
   const Template = Package.templating.Template;

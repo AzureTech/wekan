@@ -159,12 +159,12 @@ template(name="changeSettingsPopup")
     //    | {{_ 'hide-system-messages'}}
     //    if hiddenSystemMessages
     //      i.fa.fa-check
-    li
-      a.js-toggle-desktop-drag-handles
-        i.fa.fa-arrows
-        | {{_ 'show-desktop-drag-handles'}}
-        if isShowDesktopDragHandles
-          i.fa.fa-check
+    //li
+    //  a.js-toggle-desktop-drag-handles
+    //    i.fa.fa-arrows
+    //    | {{_ 'show-desktop-drag-handles'}}
+    //    if isShowDesktopDragHandles
+    //      i.fa.fa-check
     unless currentUser.isWorker
       li
         label.bold.clear
@@ -180,6 +180,13 @@ template(name="changeSettingsPopup")
               option(selected="true", value="#{day.value}") #{day.name}
             else
               option(value="#{day.value}") #{day.name}
+        label.bold.clear
+          | {{_ 'card-settings'}}
+        ul#cards.card-description-rescued
+          a.flex.js-rescue-card-description(title="{{_ 'rescue-card-description'}}")
+            b &nbsp;
+            #rescue-card-description.materialCheckBox.left(class="{{#if rescueCardDescription}}is-checked{{/if}}", value=rescueCardDescription)
+            span {{_ 'rescue-card-description'}}
         input.js-apply-user-settings.left(type="submit" value="{{_ 'apply'}}")
 
 template(name="userDeletePopup")

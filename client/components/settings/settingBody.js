@@ -1,3 +1,4 @@
+import { TAPi18n } from '/imports/i18n';
 import { ALLOWED_WAIT_SPINNERS } from '/config/const';
 
 BlazeComponent.extendComponent({
@@ -83,6 +84,12 @@ BlazeComponent.extendComponent({
   },
   toggleHideLogo() {
     $('#hide-logo').toggleClass('is-checked');
+  },
+  toggleHideCardCounterList() {
+    $('#hide-card-counter-list').toggleClass('is-checked');
+  },
+  toggleHideBoardMemberList() {
+    $('#hide-board-member-list').toggleClass('is-checked');
   },
   toggleDisplayAuthenticationMethod() {
     $('#display-authentication-method').toggleClass('is-checked');
@@ -188,6 +195,9 @@ BlazeComponent.extendComponent({
     const customLoginLogoLinkUrl = $('#custom-login-logo-link-url')
       .val()
       .trim();
+    const customHelpLinkUrl = $('#custom-help-link-url')
+      .val()
+      .trim();
     const textBelowCustomLoginLogo = $('#text-below-custom-login-logo')
       .val()
       .trim();
@@ -226,6 +236,8 @@ BlazeComponent.extendComponent({
       .val()
       .trim();
     const hideLogoChange = $('input[name=hideLogo]:checked').val() === 'true';
+    const hideCardCounterListChange = $('input[name=hideCardCounterList]:checked').val() === 'true';
+    const hideBoardMemberListChange = $('input[name=hideBoardMemberList]:checked').val() === 'true';
     const displayAuthenticationMethod =
       $('input[name=displayAuthenticationMethod]:checked').val() === 'true';
     const defaultAuthenticationMethod = $('#defaultAuthenticationMethod').val();
@@ -237,8 +249,11 @@ BlazeComponent.extendComponent({
         $set: {
           productName,
           hideLogo: hideLogoChange,
+          hideCardCounterList: hideCardCounterListChange,
+          hideBoardMemberList: hideBoardMemberListChange,
           customLoginLogoImageUrl,
           customLoginLogoLinkUrl,
+          customHelpLinkUrl,
           textBelowCustomLoginLogo,
           customTopLeftCornerLogoImageUrl,
           customTopLeftCornerLogoLinkUrl,
@@ -286,6 +301,8 @@ BlazeComponent.extendComponent({
         'click button.js-save': this.saveMailServerInfo,
         'click button.js-send-smtp-test-email': this.sendSMTPTestEmail,
         'click a.js-toggle-hide-logo': this.toggleHideLogo,
+        'click a.js-toggle-hide-card-counter-list': this.toggleHideCardCounterList,
+        'click a.js-toggle-hide-board-member-list': this.toggleHideBoardMemberList,
         'click button.js-save-layout': this.saveLayout,
         'click a.js-toggle-display-authentication-method': this
           .toggleDisplayAuthenticationMethod,

@@ -1,7 +1,7 @@
 swagger: '2.0'
 info:
   title: Wekan REST API
-  version: v6.17
+  version: v6.69
   description: |
     The REST API allows you to control and extend Wekan with ease.
 
@@ -2497,6 +2497,43 @@ paths:
             properties:
               _id:
                 type: string
+  /api/deletetoken:
+    post:
+      operationId: delete_user_token
+      summary: Delete one or all user token.
+      description: |
+        Only the admin user (the first user) can call the REST API.
+      tags:
+        - Users
+      consumes:
+        - multipart/form-data
+        - application/json
+      parameters:
+        - name: userId
+          in: formData
+          description: |
+            the user ID
+          type: string
+          required: true
+        - name: token
+          in: formData
+          description: |
+            the user hashedToken
+          type: string
+          required: true
+      produces:
+        - application/json
+      security:
+          - UserSecurity: []
+      responses:
+        '200':
+          description: |-
+            200 response
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
   /api/user:
     get:
       operationId: get_current_user
@@ -2795,6 +2832,15 @@ definitions:
           - natural
           - modern
           - moderndark
+          - exodark
+      allowsCardCounterList:
+        description: |
+           Show card counter per list
+        type: boolean
+      allowsBoardMemberList:
+        description: |
+           Show board member list
+        type: boolean
       description:
         description: |
            The description of the board
@@ -2969,6 +3015,8 @@ definitions:
       - members
       - permission
       - color
+      - allowsCardCounterList
+      - allowsBoardMemberList
       - allowsSubtasks
       - allowsAttachments
       - allowsChecklists
@@ -3734,6 +3782,16 @@ definitions:
            is the list sorted
         type: number
         x-nullable: true
+      width:
+        description: |
+           list width, default 270px
+        type: string
+        x-nullable: true
+      height:
+        description: |
+           list height
+        type: string
+        x-nullable: true
       updatedAt:
         description: |
            last update of the list
@@ -3970,6 +4028,9 @@ definitions:
           type: string
           x-nullable: true
         x-nullable: true
+      lastConnectionDate:
+        type: string
+        x-nullable: true
     required:
       - createdAt
       - modifiedAt
@@ -4049,6 +4110,10 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/UsersProfileNotifications"
+      rescueCardDescription:
+        description: |
+           show dialog for saving card description on unintentional card closing
+        type: boolean
       showCardsCountAt:
         description: |
            showCardCountAt field of the user

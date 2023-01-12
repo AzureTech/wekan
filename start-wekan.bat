@@ -15,6 +15,14 @@ REM Writable path for temporary saving attachments during migration to Meteor-Fi
 REM Create directory wekan-uploads
 SET WRITABLE_PATH=..
 
+REM # ==== AWS S3 FOR FILES ====
+REM # Any region. For example:
+REM #   us-standard,us-west-1,us-west-2,
+REM #   eu-west-1,eu-central-1,
+REM #   ap-southeast-1,ap-northeast-1,sa-east-1
+REM #
+REM SET S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "eu-west-1"}}'
+
 REM # https://github.com/wekan/wekan/wiki/Troubleshooting-Mail
 REM SET MAIL_URL=smtps://username:password@email-smtp.eu-west-1.amazonaws.com:587/
 REM SET MAIL_FROM="Wekan Boards <info@example.com>"
@@ -53,6 +61,16 @@ REM SET ACCOUNTS_LOCKOUT_UNKNOWN_USERS_FAILURE_WINDOW=15
 
 REM # ==== ACCOUNT OPTIONS ====
 REM SET ACCOUNTS_COMMON_LOGIN_EXPIRATION_IN_DAYS=90
+
+REM # ==== Allow configuration to validate uploaded attachments ====
+REM SET ATTACHMENTS_UPLOAD_EXTERNAL_PROGRAM="avscan {file}"
+REM SET ATTACHMENTS_UPLOAD_MIME_TYPES="image/*,text/*"
+REM SET ATTACHMENTS_UPLOAD_MAX_SIZE=5000000
+
+REM # ==== Allow configuration to validate uploaded avatars ====
+REM SET AVATARS_UPLOAD_EXTERNAL_PROGRAM="avscan {file}"
+REM SET AVATARS_UPLOAD_MIME_TYPES="image/*"
+REM SET AVATARS_UPLOAD_MAX_SIZE=500000
 
 REM # ==== NOTIFICATION TRAY AFTER READ DAYS BEFORE REMOVE =====
 REM # Number of days after a notification is read before we remove it.
@@ -102,6 +120,10 @@ REM # The address of the server where Matomo is hosted.
 REM # example: - MATOMO_ADDRESS=https://example.com/matomo
 REM SET MATOMO_ADDRESS=
 
+REM # ==== METRICS ALLOWED IP ADDRESSES ====
+REM # https://github.com/wekan/wekan/wiki/Metrics
+REM SET METRICS_ALLOWED_IP_ADDRESSES=192.168.0.100,192.168.0.200
+
 REM # The value of the site ID given in Matomo server for Wekan
 REM # example: - MATOMO_SITE_ID=12345
 REM SET MATOMO_SITE_ID=
@@ -125,6 +147,12 @@ REM SET TRUSTED_URL=
 REM # What to send to Outgoing Webhook, or leave out. Example, that includes all that are default: cardId,listId,oldListId,boardId,comment,user,card,commentId .
 REM # example: WEBHOOKS_ATTRIBUTES=cardId,listId,oldListId,boardId,comment,user,card,commentId
 REM SET WEBHOOKS_ATTRIBUTES=
+
+REM ------------------------------------------------------------
+
+REM ## ==== AUTOLOGIN WITH OIDC/OAUTH2 ====
+REM ## https://github.com/wekan/wekan/wiki/autologin
+REM # SET OIDC_REDIRECTION_ENABLED=true
 
 REM ------------------------------------------------------------
 
@@ -462,7 +490,8 @@ REM SET WAIT_SPINNER=Bounce
 
 REM # https://github.com/wekan/wekan/issues/3585#issuecomment-1021522132
 REM # Add more Node heap:
-SET NODE_OPTIONS="--max_old_space_size=4096"
+REM # SET NODE_OPTIONS="--max_old_space_size=4096"
 REM # Add more stack. ulimit is not at Windows, stack-size is at Windows:
 REM #   bash -c "ulimit -s 65500; exec node --stack-size=65500 main.js"
-node --stack-size=65500 main.js
+REM #node --stack-size=65500 main.js
+node main.js

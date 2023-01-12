@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { TAPi18n } from '/imports/i18n';
 import AccountSettings from '../models/accountSettings';
 import TableVisibilityModeSettings from '../models/tableVisibilityModeSettings';
 import Actions from '../models/actions';
@@ -73,6 +74,40 @@ Migrations.add('board-background-color', () => {
   );
 });
 
+Migrations.add('add-cardcounterlist-allowed', () => {
+  Boards.update(
+    {
+      allowsCardCounterList: {
+        $exists: false,
+      },
+    },
+    {
+      $set: {
+        allowsCardCounterList: true,
+      },
+    },
+    noValidateMulti,
+  );
+});
+
+/*
+Migrations.add('add-boardmemberlist-allowed', () => {
+  Boards.update(
+    {
+      allowsBoardMemberList: {
+        $exists: false,
+      },
+    },
+    {
+      $set: {
+        allowsBoardMemberList: true,
+      },
+    },
+    noValidateMulti,
+  );
+});
+*/
+
 Migrations.add('lowercase-board-permission', () => {
   ['Public', 'Private'].forEach(permission => {
     Boards.update(
@@ -83,6 +118,7 @@ Migrations.add('lowercase-board-permission', () => {
   });
 });
 
+/*
 // Security migration: see https://github.com/wekan/wekan/issues/99
 Migrations.add('change-attachments-type-for-non-images', () => {
   const newTypeForNonImage = 'application/octet-stream';
@@ -111,6 +147,8 @@ Migrations.add('card-covers', () => {
   });
   Attachments.update({}, { $unset: { cover: '' } }, noValidateMulti);
 });
+
+*/
 
 Migrations.add('use-css-class-for-boards-colors', () => {
   const associationTable = {
@@ -471,6 +509,38 @@ Migrations.add('add-hide-logo', () => {
   );
 });
 
+Migrations.add('add-hide-card-counter-list', () => {
+  Settings.update(
+    {
+      hideCardCounterList: {
+        $exists: false,
+      },
+    },
+    {
+      $set: {
+        hideCardCounterList: false,
+      },
+    },
+    noValidateMulti,
+  );
+});
+
+Migrations.add('add-hide-board-member-list', () => {
+  Settings.update(
+    {
+      hideBoardMemberList: {
+        $exists: false,
+      },
+    },
+    {
+      $set: {
+        hideBoardMemberList: false,
+      },
+    },
+    noValidateMulti,
+  );
+});
+
 Migrations.add('add-displayAuthenticationMethod', () => {
   Settings.update(
     {
@@ -679,7 +749,7 @@ Migrations.add('add-missing-created-and-modified', () => {
     modifiedAtTables.map(db =>
       db
         .rawCollection()
-        .update(
+        .updateMany(
           { modifiedAt: { $exists: false } },
           { $set: { modifiedAt: new Date() } },
           { multi: true },
@@ -687,7 +757,7 @@ Migrations.add('add-missing-created-and-modified', () => {
         .then(() =>
           db
             .rawCollection()
-            .update(
+            .updateMany(
               { createdAt: { $exists: false } },
               { $set: { createdAt: new Date() } },
               { multi: true },
@@ -734,7 +804,7 @@ Migrations.add('fix-incorrect-dates', () => {
       .rawCollection()
       .find({ $or: [{ createdAt: { $type: 1 } }, { updatedAt: { $type: 1 } }] })
       .forEach(({ _id, createdAt, updatedAt }) => {
-        t.rawCollection().update(
+        t.rawCollection().updateMany(
           { _id },
           {
             $set: {
@@ -1088,6 +1158,38 @@ Migrations.add('add-hide-logo-by-default', () => {
   );
 });
 
+Migrations.add('add-hide-card-counter-list-by-default', () => {
+  Settings.update(
+    {
+      hideCardCounterList: {
+        hideCardCounterList: false,
+      },
+    },
+    {
+      $set: {
+        hideCardCounterList: true,
+      },
+    },
+    noValidateMulti,
+  );
+});
+
+Migrations.add('add-hide-board-member-list-by-default', () => {
+  Settings.update(
+    {
+      hideBoardMemberList: {
+        hideBoardMember: false,
+      },
+    },
+    {
+      $set: {
+        hideBoardMemberList: true,
+      },
+    },
+    noValidateMulti,
+  );
+});
+
 Migrations.add('add-card-number-allowed', () => {
   Boards.update(
     {
@@ -1144,14 +1246,9 @@ Migrations.add('add-card-details-show-lists', () => {
 });
 
 Migrations.add('migrate-attachments-collectionFS-to-ostrioFiles', () => {
-  //const storagePath = Attachments.storagePath();
-  const storagePath = process.env.WRITABLE_PATH || `./wekan-uploads`;
-  if (!fs.existsSync(storagePath)) {
-    console.log("create storagePath because it doesn't exist: " + storagePath);
-    fs.mkdirSync(storagePath, { recursive: true });
-  }
   AttachmentsOld.find().forEach(function(fileObj) {
     const newFileName = fileObj.name();
+    const storagePath = Attachments.storagePath({});
     const filePath = path.join(storagePath, `${fileObj._id}-${newFileName}`);
 
     // This is "example" variable, change it to the userId that you might be using.
@@ -1164,12 +1261,8 @@ Migrations.add('migrate-attachments-collectionFS-to-ostrioFiles', () => {
     const readStream = fileObj.createReadStream('attachments');
     const writeStream = fs.createWriteStream(filePath);
 
-    writeStream.on('error', error => {
-      console.error('[writeStream error]: ', error, filePath);
-    });
-
-    readStream.on('error', error => {
-      console.error('[readStream error]: ', error, filePath);
+    writeStream.on('error', function(err) {
+      console.log('Writing error: ', err, filePath);
     });
 
     // Once we have a file, then upload it to our new data storage
@@ -1187,17 +1280,17 @@ Migrations.add('migrate-attachments-collectionFS-to-ostrioFiles', () => {
             cardId: fileObj.cardId,
             listId: fileObj.listId,
             swimlaneId: fileObj.swimlaneId,
-            source: 'import,'
+            source: 'import'
           },
           userId,
           size: fileSize,
           fileId,
         },
-        (error, fileRef) => {
-          if (error) {
-            console.error('[Attachments#addFile error]: ', error);
+        (err, fileRef) => {
+          if (err) {
+            console.log(err);
           } else {
-            console.log('File Inserted: ', fileRef);
+            console.log('File Inserted: ', fileRef._id);
             // Set the userId again
             Attachments.update({ _id: fileRef._id }, { $set: { userId } });
             fileObj.remove();
@@ -1207,19 +1300,18 @@ Migrations.add('migrate-attachments-collectionFS-to-ostrioFiles', () => {
       ); // proceedAfterUpload
     });
 
+    readStream.on('error', error => {
+      console.log('Error: ', filePath, error);
+    });
+
     readStream.pipe(writeStream);
   });
 });
 
 Migrations.add('migrate-avatars-collectionFS-to-ostrioFiles', () => {
-  //const storagePath = Avatars.storagePath();
-  const storagePath = process.env.WRITABLE_PATH || `./wekan-uploads`;
-  if (!fs.existsSync(storagePath)) {
-    console.log("create storagePath because it doesn't exist: " + storagePath);
-    fs.mkdirSync(storagePath, { recursive: true });
-  }
   AvatarsOld.find().forEach(function(fileObj) {
     const newFileName = fileObj.name();
+    const storagePath = Avatars.storagePath({});
     const filePath = path.join(storagePath, `${fileObj._id}-${newFileName}`);
 
     // This is "example" variable, change it to the userId that you might be using.
@@ -1232,12 +1324,8 @@ Migrations.add('migrate-avatars-collectionFS-to-ostrioFiles', () => {
     const readStream = fileObj.createReadStream('avatars');
     const writeStream = fs.createWriteStream(filePath);
 
-    writeStream.on('error', error => {
-      console.error('[writeStream error]: ', error, filePath);
-    });
-
-    readStream.on('error', error => {
-      console.error('[readStream error]: ', error, filePath);
+    writeStream.on('error', function(err) {
+      console.log('Writing error: ', err, filePath);
     });
 
     // Once we have a file, then upload it to our new data storage
@@ -1260,11 +1348,11 @@ Migrations.add('migrate-avatars-collectionFS-to-ostrioFiles', () => {
           size: fileSize,
           fileId,
         },
-        (error, fileRef) => {
-          if (error) {
-            console.error('[Avatars#addFile error]: ', error);
+        (err, fileRef) => {
+          if (err) {
+            console.log(err);
           } else {
-            console.log('File Inserted: ', newFileName, fileRef);
+            console.log('File Inserted: ', newFileName, fileRef._id);
             // Set the userId again
             Avatars.update({ _id: fileRef._id }, { $set: { userId } });
             Users.find().forEach(user => {
@@ -1290,6 +1378,10 @@ Migrations.add('migrate-avatars-collectionFS-to-ostrioFiles', () => {
       );
     });
 
+    readStream.on('error', error => {
+      console.log('Error: ', filePath, error);
+    });
+
     readStream.pipe(writeStream);
   });
 });
@@ -1299,4 +1391,13 @@ Migrations.add('migrate-attachment-drop-index-cardId', () => {
     Attachments.collection._dropIndex({'cardId': 1});
   } catch (error) {
   }
+});
+
+Migrations.add('migrate-attachment-migration-fix-source-import', () => {
+  // there was an error at first versions, so source was import, instead of import
+  Attachments.update(
+    {"meta.source":"import,"},
+    {$set:{"meta.source":"import"}},
+    noValidateMulti
+  );
 });

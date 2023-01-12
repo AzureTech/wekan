@@ -11,7 +11,15 @@
       #---------------------------------------------
       # WRITEABLE PATH
       export WRITABLE_PATH=..
-      #---------------------------------------------
+      #-----------------------------------------------------------------
+      # ==== AWS S3 FOR FILES ====
+      # Any region. For example:
+      #   us-standard,us-west-1,us-west-2,
+      #   eu-west-1,eu-central-1,
+      #   ap-southeast-1,ap-northeast-1,sa-east-1
+      #
+      #export S3='{"s3":{"key": "xxx", "secret": "xxx", "bucket": "xxx", "region": "xxx"}}'
+      #-----------------------------------------------------------------
       # Production: https://example.com/wekan
       # Local: http://localhost:2000
       #export ipaddress=$(ifdata -pa eth0)
@@ -52,6 +60,16 @@
       # https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config
       # Defaults below. Uncomment to change. wekan/server/accounts-common.js
       # - ACCOUNTS_COMMON_LOGIN_EXPIRATION_IN_DAYS=90
+      #---------------------------------------------------------------
+      # ==== Allow configuration to validate uploaded attachments ====
+      #export ATTACHMENTS_UPLOAD_EXTERNAL_PROGRAM="/usr/local/bin/avscan {file}"
+      #export ATTACHMENTS_UPLOAD_MIME_TYPES="image/*,text/*"
+      #export ATTACHMENTS_UPLOAD_MAX_SIZE=5000000
+      #---------------------------------------------------------------
+      # ==== Allow configuration to validate uploaded avatars ====
+      #export AVATARS_UPLOAD_EXTERNAL_PROGRAM="/usr/local/bin/avscan {file}"
+      #export AVATARS_UPLOAD_MIME_TYPES="image/*"
+      #export AVATARS_UPLOAD_MAX_SIZE=500000
       #---------------------------------------------------------------
       # ==== RICH TEXT EDITOR IN CARD COMMENTS ====
       # https://github.com/wekan/wekan/pull/2560
@@ -125,6 +143,10 @@
       # Example: export MATOMO_WITH_USERNAME=true
       #export MATOMO_WITH_USERNAME='false'
       #---------------------------------------------
+      # ==== METRICS ALLOWED IP ADDRESSES ====
+      # https://github.com/wekan/wekan/wiki/Metrics
+      #export METRICS_ALLOWED_IP_ADDRESSES=192.168.0.100,192.168.0.200
+      #-----------------------------------------------------------------
       # Enable browser policy and allow one trusted URL that can have iframe that has Wekan embedded inside.
       # Setting this to false is not recommended, it also disables all other browser policy protections
       # and allows all iframing etc. See wekan/server/policy.js
@@ -136,6 +158,10 @@
       # What to send to Outgoing Webhook, or leave out. Example, that includes all that are default: cardId,listId,oldListId,boardId,comment,user,card,commentId .
       # Example: export WEBHOOKS_ATTRIBUTES=cardId,listId,oldListId,boardId,comment,user,card,commentId
       export WEBHOOKS_ATTRIBUTES=''
+      #---------------------------------------------
+      # ==== AUTOLOGIN WITH OIDC/OAUTH2 ====
+      # https://github.com/wekan/wekan/wiki/autologin
+      #export OIDC_REDIRECTION_ENABLED=true
       #---------------------------------------------
       # OAUTH2 ORACLE on premise identity manager OIM
       #export ORACLE_OIM_ENABLED=true
@@ -506,9 +532,11 @@
       #---------------------------------------------------------------------
       # https://github.com/wekan/wekan/issues/3585#issuecomment-1021522132
       # Add more Node heap:
-      export NODE_OPTIONS="--max_old_space_size=4096"
+      #export NODE_OPTIONS="--max_old_space_size=4096"
       # Add more stack:
-      bash -c "ulimit -s 65500; exec node --stack-size=65500 main.js"
+      #bash -c "ulimit -s 65500; exec node --stack-size=65500 --trace-deprecation main.js"
+      #bash -c "ulimit -s 65500; exec node --stack-size=65500 main.js"
+      bash -c "ulimit -s 65500; exec node main.js"
       #node main.js
       #---------------------------------------------------------------------
       # & >> ../../wekan.log

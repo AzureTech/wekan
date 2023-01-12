@@ -34,13 +34,13 @@ template(name="checklistDetail")
           a.fa.fa-navicon.checklist-details-menu.js-open-checklist-details-menu(title="{{_ 'checklistActionsPopup-title'}}")
 
         if canModifyCard
-          h2.title.js-open-inlined-form.is-editable
-            if isMiniScreenOrShowDesktopDragHandles
+          h4.title.js-open-inlined-form.is-editable
+            if isTouchScreenOrShowDesktopDragHandles
               span.fa.checklist-handle(class="fa-arrows" title="{{_ 'dragChecklist'}}")
             +viewer
               = checklist.title
         else
-          h2.title
+          h4.title
             +viewer
                 = checklist.title
 
@@ -61,7 +61,7 @@ template(name="addChecklistItemForm")
   textarea.js-add-checklist-item(rows='1' autofocus)
   .edit-controls.clearfix
     button.primary.confirm.js-submit-add-checklist-item-form(type="submit") {{_ 'save'}}
-    a.fa.fa-times-thin.js-close-inlined-form
+    a.fa.fa-times-thin.js-close-inlined-form(title="{{_ 'close-add-checklist-item'}}")
     if showNewlineBecomesNewChecklistItem
       .material-toggle-switch(title="{{_ 'newlineBecomesNewChecklistItem'}}")
         input.toggle-switch(type="checkbox" id="toggleNewlineBecomesNewChecklistItem")
@@ -77,7 +77,7 @@ template(name="editChecklistItemForm")
       = checklist.title
   .edit-controls.clearfix
     button.primary.confirm.js-submit-edit-checklist-item-form(type="submit") {{_ 'save'}}
-    a.fa.fa-times-thin.js-close-inlined-form
+    a.fa.fa-times-thin.js-close-inlined-form(title="{{_ 'close-edit-checklist-item'}}")
     span(title=createdAt) {{ moment createdAt }}
     if canModifyCard
       a.js-delete-checklist-item {{_ "delete"}}...
@@ -100,11 +100,12 @@ template(name="checklistItems")
           i.fa.fa-plus
 
 template(name='checklistItemDetail')
-  .js-checklist-item.checklist-item(class="{{#if item.isFinished }}is-checked{{#if hideCheckedItems}} invisible{{/if}}{{/if}}")
+  .js-checklist-item.checklist-item(class="{{#if item.isFinished }}is-checked{{#if hideCheckedItems}} invisible{{/if}}{{/if}}"
+    role="checkbox" aria-checked="{{#if item.isFinished }}true{{else}}false{{/if}}" tabindex="0")
     if canModifyCard
       .check-box-container
         .check-box.materialCheckBox(class="{{#if item.isFinished }}is-checked{{/if}}")
-      if isMiniScreenOrShowDesktopDragHandles
+      if isTouchScreenOrShowDesktopDragHandles
         span.fa.checklistitem-handle(class="fa-arrows" title="{{_ 'dragChecklistItem'}}")
       .item-title.js-open-inlined-form.is-editable(class="{{#if item.isFinished }}is-checked{{/if}}")
         +viewer
@@ -114,35 +115,6 @@ template(name='checklistItemDetail')
       .item-title(class="{{#if item.isFinished }}is-checked{{/if}}")
         +viewer
           = item.title
-
-template(name="convertChecklistItemToCardPopup")
-  label(for='convert-checklist-item-to-card-title') {{_ 'title'}}:
-  textarea#copy-card-title.minicard-composer-textarea.js-card-title(autofocus)
-    = item.title
-  +boardsSwimlanesAndLists
-
-template(name="boardsSwimlanesAndLists")
-  unless currentUser.isWorker
-    label {{_ 'boards'}}:
-    select.js-select-boards(autofocus)
-      each boards
-        if $eq _id currentBoard._id
-          option(value="{{_id}}" selected) {{_ 'current'}}
-        else
-          option(value="{{_id}}") {{title}}
-
-  label {{_ 'swimlanes'}}:
-  select.js-select-swimlanes
-    each swimlanes
-      option(value="{{_id}}") {{title}}
-
-  label {{_ 'lists'}}:
-  select.js-select-lists
-    each aBoardLists
-      option(value="{{_id}}") {{title}}
-
-  .edit-controls.clearfix
-    button.primary.confirm.js-done {{_ 'done'}}
 
 template(name="checklistActionsPopup")
   ul.pop-over-list
@@ -171,22 +143,22 @@ template(name="copyAndMoveChecklist")
         if $eq _id currentBoard._id
           option(value="{{_id}}" selected) {{_ 'current'}}
         else
-          option(value="{{_id}}" selected="{{#if isChecklistDialogOptionBoardId _id}}selected{{/if}}") {{title}}
+          option(value="{{_id}}" selected="{{#if isDialogOptionBoardId _id}}selected{{/if}}") {{title}}
 
   label {{_ 'swimlanes'}}:
   select.js-select-swimlanes
     each swimlanes
-      option(value="{{_id}}" selected="{{#if isChecklistDialogOptionSwimlaneId _id}}selected{{/if}}") {{title}}
+      option(value="{{_id}}" selected="{{#if isDialogOptionSwimlaneId _id}}selected{{/if}}") {{title}}
 
   label {{_ 'lists'}}:
   select.js-select-lists
     each lists
-      option(value="{{_id}}" selected="{{#if isChecklistDialogOptionListId _id}}selected{{/if}}") {{title}}
+      option(value="{{_id}}" selected="{{#if isDialogOptionListId _id}}selected{{/if}}") {{title}}
 
   label {{_ 'cards'}}:
   select.js-select-cards
     each cards
-      option(value="{{_id}}" selected="{{#if isChecklistDialogOptionCardId _id}}selected{{/if}}") {{title}}
+      option(value="{{_id}}" selected="{{#if isDialogOptionCardId _id}}selected{{/if}}") {{title}}
 
   .edit-controls.clearfix
     button.primary.confirm.js-done {{_ 'done'}}

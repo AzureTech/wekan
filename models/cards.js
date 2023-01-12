@@ -1,10 +1,12 @@
+import moment from 'moment/min/moment-with-locales';
 import {
   ALLOWED_COLORS,
   TYPE_CARD,
   TYPE_LINKED_BOARD,
   TYPE_LINKED_CARD,
 } from '../config/const';
-import Attachments from "./attachments";
+import Attachments, { fileStoreStrategyFactory } from "./attachments";
+import { copyFile } from './lib/fileStoreStrategy.js';
 
 
 Cards = new Mongo.Collection('cards');
@@ -585,11 +587,11 @@ Cards.helpers({
     const _id = Cards.insert(this);
 
     // Copy attachments
-    oldCard.attachments().forEach(att => {
-      att.cardId = _id;
-      delete att._id;
-      return Attachments.insert(att);
-    });
+    oldCard.attachments()
+      .map(att => att.get())
+      .forEach(att => {
+        copyFile(att, _id, fileStoreStrategyFactory);
+      });
 
     // copy checklists
     Checklists.find({ cardId: oldId }).forEach(ch => {
@@ -607,6 +609,8 @@ Cards.helpers({
     CardComments.find({ cardId: oldId }).forEach(cmt => {
       cmt.copy(_id);
     });
+    // restore the id, otherwise new copies will fail
+    this._id = oldId;
 
     return _id;
   },
@@ -689,6 +693,53 @@ Cards.helpers({
     return _.contains(this.labelIds, labelId);
   },
 
+  /** returns the sort number of a list
+   * @param listId a list id
+   * @param swimlaneId a swimlane id
+   * top sorting of the card at the top if true, or from the bottom if false
+   */
+  getSort(listId, swimlaneId, top) {
+    if (!_.isBoolean(top)) {
+      top = true;
+    }
+    if (!listId) {
+      listId = this.listId;
+    }
+    if (!swimlaneId) {
+      swimlaneId = this.swimlaneId;
+    }
+    const selector = {
+      listId: listId,
+      swimlaneId: swimlaneId,
+      archived: false,
+    };
+    const sorting = top ? 1 : -1;
+    const card = Cards.findOne(selector, { sort: { sort: sorting } });
+    let ret = null
+    if (card) {
+      ret = card.sort;
+    }
+    return ret;
+  },
+
+  /** returns the sort number of a list from the card at the top
+   * @param listId a list id
+   * @param swimlaneId a swimlane id
+   */
+  getMinSort(listId, swimlaneId) {
+    const ret = this.getSort(listId, swimlaneId, true);
+    return ret;
+  },
+
+  /** returns the sort number of a list from the card at the bottom
+   * @param listId a list id
+   * @param swimlaneId a swimlane id
+   */
+  getMaxSort(listId, swimlaneId) {
+    const ret = this.getSort(listId, swimlaneId, false);
+    return ret;
+  },
+
   user() {
     return Users.findOne(this.userId);
   },
@@ -737,17 +788,15 @@ Cards.helpers({
   },
 
   attachments() {
+    let id = this._id;
     if (this.isLinkedCard()) {
-      return Attachments.find(
-        { 'meta.cardId': this.linkedId },
-        { sort: { uploadedAt: -1 } },
-      ).each();
-    } else {
-      return Attachments.find(
-        { 'meta.cardId': this._id },
-        { sort: { uploadedAt: -1 } },
-      ).each();
+       id = this.linkedId;
     }
+    let ret = Attachments.find(
+      { 'meta.cardId': id },
+      { sort: { uploadedAt: -1 } },
+    ).each();
+    return ret;
   },
 
   cover() {
@@ -2989,17 +3038,51 @@ const addCronJob = _.debounce(
 );
 
 if (Meteor.isServer) {
+  Meteor.methods({
+    /** copies a card
+     * <li> this method is needed on the server because attachments can only be copied on the server (access to file system)
+     * @param card id to copy
+     * @param boardId copy to this board
+     * @param swimlandeId copy to this swimlane id
+     * @param listId copy to this list id
+     * @param insertAtTop insert the card at the top?
+     * @param mergeCardValues this values into the copied card
+     * @return the new card id
+     */
+    copyCard(cardId, boardId, swimlaneId, listId, insertAtTop, mergeCardValues) {
+      check(cardId, String);
+      check(boardId, String);
+      check(swimlaneId, String);
+      check(listId, String);
+      check(insertAtTop, Boolean);
+      check(mergeCardValues, Object);
+
+      const card = Cards.findOne({_id: cardId});
+      Object.assign(card, mergeCardValues);
+
+      const sort = card.getSort(listId, swimlaneId, insertAtTop);
+      if (insertAtTop) {
+        card.sort = sort - 1;
+      } else
+      {
+        card.sort = sort + 1;
+      }
+
+      const ret = card.copy(boardId, swimlaneId, listId);
+      return ret;
+    },
+  });
   // Cards are often fetched within a board, so we create an index to make these
   // queries more efficient.
   Meteor.startup(() => {
-    Cards._collection._ensureIndex({ modifiedAt: -1 });
-    Cards._collection._ensureIndex({ boardId: 1, createdAt: -1 });
+    Cards._collection.createIndex({ modifiedAt: -1 });
+    Cards._collection.createIndex({ boardId: 1, createdAt: -1 });
     // https://github.com/wekan/wekan/issues/1863
     // Swimlane added a new field in the cards collection of mongodb named parentId.
     // When loading a board, mongodb is searching for every cards, the id of the parent (in the swinglanes collection).
     // With a huge database, this result in a very slow app and high CPU on the mongodb side.
     // To correct it, add Index to parentId:
-    Cards._collection._ensureIndex({ parentId: 1 });
+    Cards._collection.createIndex({ parentId: 1 });
     // let notifydays = parseInt(process.env.NOTIFY_DUE_DAYS_BEFORE_AND_AFTER) || 2; // default as 2 days b4 and after
     // let notifyitvl = parseInt(process.env.NOTIFY_DUE_AT_HOUR_OF_DAY) || 3600 * 24 * 1e3; // default interval as one day
     // Meteor.call("findDueCards",notifydays,notifyitvl);

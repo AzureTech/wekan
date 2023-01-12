@@ -40,7 +40,7 @@ Utils = {
     const ret = Cards.findOne(cardId);
     return ret;
   },
-  reload () {
+  reload() {
     // we move all window.location.reload calls into this function
     // so we can disable it when running tests.
     // This is because we are not allowed to override location.reload but
@@ -138,6 +138,21 @@ Utils = {
     Utils.reload();
   },
 
+  myCardsView() {
+    let view = window.localStorage.getItem('myCardsView');
+
+    if (!view || !['boards', 'table'].includes(view)) {
+      view = 'boards';
+    }
+
+    return view;
+  },
+
+  setMyCardsView(view) {
+    window.localStorage.setItem('myCardsView', view);
+    Utils.reload();
+  },
+
   // XXX We should remove these two methods
   goBoardId(_id) {
     const board = Boards.findOne(_id);
@@ -186,14 +201,14 @@ Utils = {
       image = document.createElement('img');
     const maxSize = options.maxSize || 1024;
     const ratio = options.ratio || 1.0;
-    const next = function(result) {
+    const next = function (result) {
       image = null;
       canvas = null;
       if (typeof callback === 'function') {
         callback(result);
       }
     };
-    image.onload = function() {
+    image.onload = function () {
       let width = this.width,
         height = this.height;
       let changed = false;
@@ -222,7 +237,7 @@ Utils = {
         next(changed);
       }
     };
-    image.onerror = function() {
+    image.onerror = function () {
       next(false);
     };
     image.src = dataurl;
@@ -241,43 +256,43 @@ Utils = {
     // OLD WINDOW WIDTH DETECTION:
     this.windowResizeDep.depend();
     return $(window).width() <= 800;
+  },
+
+  isTouchScreen() {
 
     // NEW TOUCH DEVICE DETECTION:
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Browser_detection_using_the_user_agent
 
-    /*
     var hasTouchScreen = false;
     if ("maxTouchPoints" in navigator) {
-        hasTouchScreen = navigator.maxTouchPoints > 0;
+      hasTouchScreen = navigator.maxTouchPoints > 0;
     } else if ("msMaxTouchPoints" in navigator) {
-        hasTouchScreen = navigator.msMaxTouchPoints > 0;
+      hasTouchScreen = navigator.msMaxTouchPoints > 0;
     } else {
-        var mQ = window.matchMedia && matchMedia("(pointer:coarse)");
-        if (mQ && mQ.media === "(pointer:coarse)") {
-            hasTouchScreen = !!mQ.matches;
-        } else if ('orientation' in window) {
-            hasTouchScreen = true; // deprecated, but good fallback
-        } else {
-            // Only as a last resort, fall back to user agent sniffing
-            var UA = navigator.userAgent;
-            hasTouchScreen = (
-                /\b(BlackBerry|webOS|iPhone|IEMobile)\b/i.test(UA) ||
-                /\b(Android|Windows Phone|iPad|iPod)\b/i.test(UA)
-            );
-        }
+      var mQ = window.matchMedia && matchMedia("(pointer:coarse)");
+      if (mQ && mQ.media === "(pointer:coarse)") {
+        hasTouchScreen = !!mQ.matches;
+      } else if ('orientation' in window) {
+        hasTouchScreen = true; // deprecated, but good fallback
+      } else {
+        // Only as a last resort, fall back to user agent sniffing
+        var UA = navigator.userAgent;
+        hasTouchScreen = (
+          /\b(BlackBerry|webOS|iPhone|IEMobile)\b/i.test(UA) ||
+          /\b(Android|Windows Phone|iPad|iPod)\b/i.test(UA)
+        );
+      }
     }
-    */
-    //if (hasTouchScreen)
-    //    document.getElementById("exampleButton").style.padding="1em";
-    //return false;
+    return hasTouchScreen;
   },
 
   // returns if desktop drag handles are enabled
   isShowDesktopDragHandles() {
-    const currentUser = Meteor.user();
-    if (currentUser) {
-      return (currentUser.profile || {}).showDesktopDragHandles;
-    } else if (window.localStorage.getItem('showDesktopDragHandles')) {
+    //const currentUser = Meteor.user();
+    //if (currentUser) {
+    //  return (currentUser.profile || {}).showDesktopDragHandles;
+    //} else if (window.localStorage.getItem('showDesktopDragHandles')) {
+    if (window.localStorage.getItem('showDesktopDragHandles')) {
       return true;
     } else {
       return false;
@@ -285,8 +300,9 @@ Utils = {
   },
 
   // returns if mini screen or desktop drag handles
-  isMiniScreenOrShowDesktopDragHandles() {
-    return this.isMiniScreen() || this.isShowDesktopDragHandles();
+  isTouchScreenOrShowDesktopDragHandles() {
+    //return this.isTouchScreen() || this.isShowDesktopDragHandles();
+    return this.isShowDesktopDragHandles();
   },
 
   calculateIndexData(prevData, nextData, nItems = 1) {
@@ -381,7 +397,7 @@ Utils = {
     window._paq.push(['trackPageView']);
     window._paq.push(['enableLinkTracking']);
 
-    (function() {
+    (function () {
       window._paq.push(['setTrackerUrl', `${data.address}piwik.php`]);
       window._paq.push(['setSiteId', data.siteId]);
 
@@ -485,8 +501,8 @@ Utils = {
   copyTextToClipboard(text) {
     let ret;
     if (navigator.clipboard) {
-      ret = navigator.clipboard.writeText(text).then(function() {
-      }, function(err) {
+      ret = navigator.clipboard.writeText(text).then(function () {
+      }, function (err) {
         console.error('Async: Could not copy text: ', err);
       });
     } else {

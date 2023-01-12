@@ -1,12 +1,16 @@
-FROM ubuntu:rolling
+FROM ubuntu:21.10
 LABEL maintainer="sgr"
 
-ENV BUILD_DEPS="gnupg gosu libarchive-tools wget curl bzip2 g++ build-essential python git ca-certificates iproute2"
+# 2022-04-25:
+# - gyp does not yet work with Ubuntu 22.04 ubuntu:rolling,
+#   so changing to 21.10. https://github.com/wekan/wekan/issues/4488
+
+ENV BUILD_DEPS="gnupg gosu libarchive-tools wget curl bzip2 g++ build-essential python3 git ca-certificates iproute2"
 ENV DEBIAN_FRONTEND=noninteractive
 
 ENV \
     DEBUG=false \
-    NODE_VERSION=v14.19.1 \
+    NODE_VERSION=v14.21.2 \
     METEOR_RELEASE=1.10.2 \
     USE_EDGE=false \
     METEOR_EDGE=1.5-beta.17 \
@@ -26,6 +30,12 @@ ENV \
     RICHER_CARD_COMMENT_EDITOR=false \
     CARD_OPENED_WEBHOOK_ENABLED=false \
     ATTACHMENTS_STORE_PATH="" \
+    ATTACHMENTS_UPLOAD_EXTERNAL_PROGRAM="" \
+    ATTACHMENTS_UPLOAD_MIME_TYPES="" \
+    ATTACHMENTS_UPLOAD_MAX_SIZE=0 \
+    AVATARS_UPLOAD_EXTERNAL_PROGRAM="" \
+    AVATARS_UPLOAD_MIME_TYPES="" \
+    AVATARS_UPLOAD_MAX_SIZE=0 \
     MAX_IMAGE_PIXEL="" \
     IMAGE_COMPRESS_RATIO="" \
     NOTIFICATION_TRAY_AFTER_READ_DAYS_BEFORE_REMOVE="" \
@@ -133,7 +143,9 @@ ENV \
     SAML_LOCAL_PROFILE_MATCH_ATTRIBUTE="" \
     SAML_ATTRIBUTES="" \
     DEFAULT_WAIT_SPINNER="" \
-    NODE_OPTIONS="--max_old_space_size=4096"
+    S3=""
+# \
+#    NODE_OPTIONS="--max_old_space_size=4096"
 
 #---------------------------------------------------------------------
 # https://github.com/wekan/wekan/issues/3585#issuecomment-1021522132
@@ -219,12 +231,6 @@ RUN set -o xtrace \
   && chown -R wekan:wekan /home/wekan/app /home/wekan/.meteor
 
 USER wekan
-
-RUN \
-    set -o xtrace && \
-    sed -i 's/api\.versionsFrom/\/\/api.versionsFrom/' /home/wekan/app/packages/meteor-useraccounts-core/package.js && \
-    cd /home/wekan/.meteor && \
-    /home/wekan/.meteor/meteor -- help;
 
 RUN \
     set -o xtrace && \

@@ -230,6 +230,10 @@ template(name='layoutSettings')
       .form-group
         input.wekan-form-control#custom-login-logo-link-url(type="text", placeholder="" value="{{currentSetting.customLoginLogoLinkUrl}}")
     li.layout-form
+      .title {{_ 'custom-help-link-url'}}
+      .form-group
+        input.wekan-form-control#custom-help-link-url(type="text", placeholder="" value="{{currentSetting.customHelpLinkUrl}}")
+    li.layout-form
       .title {{_ 'text-below-custom-login-logo'}}
       .form-group
         textarea#text-below-custom-login-logo.wekan-form-control= currentSetting.textBelowCustomLoginLogo
@@ -249,6 +253,20 @@ template(name='layoutSettings')
       .title {{_ 'automatic-linked-url-schemes'}}
       .form-group
         textarea#automatic-linked-url-schemes.wekan-form-control= currentSetting.automaticLinkedUrlSchemes
+    li.layout-form
+      .title {{_ 'hide-card-counter-list'}}
+      .form-group.flex
+        input.wekan-form-control#hide-card-counter-list(type="radio" name="hideCardCounterList" value="true" checked="{{#if currentSetting.hideCardCounterList}}checked{{/if}}")
+        span {{_ 'yes'}}
+        input.wekan-form-control#hide-card-counter-list(type="radio" name="hideCardCounterList" value="false" checked="{{#unless currentSetting.hideCardCounterList}}checked{{/unless}}")
+        span {{_ 'no'}}
+    li.layout-form
+      .title {{_ 'hide-board-member-list'}}
+      .form-group.flex
+        input.wekan-form-control#hide-board-member-list(type="radio" name="hideBoardMemberList" value="true" checked="{{#if currentSetting.hideBoardMemberList}}checked{{/if}}")
+        span {{_ 'yes'}}
+        input.wekan-form-control#hide-board-member-list(type="radio" name="hideBoardMemberList" value="false" checked="{{#unless currentSetting.hideBoardMemberList}}checked{{/unless}}")
+        span {{_ 'no'}}
     li
       button.js-save-layout.primary {{_ 'save'}}
 

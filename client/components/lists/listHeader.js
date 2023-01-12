@@ -1,3 +1,5 @@
+import { TAPi18n } from '/imports/i18n';
+
 let listsColors;
 Meteor.startup(() => {
   listsColors = Lists.simpleSchema()._schema.color.allowedValues;
@@ -307,11 +309,11 @@ BlazeComponent.extendComponent({
         },
         'click .js-submit'() {
           this.currentList.setColor(this.currentColor.get());
-          Popup.back();
+          Popup.close();
         },
         'click .js-remove-color'() {
           this.currentList.setColor(null);
-          Popup.back();
+          Popup.close();
         },
       },
     ];
